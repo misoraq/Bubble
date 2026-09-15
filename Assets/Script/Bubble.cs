@@ -72,7 +72,10 @@ public class Bubble : MonoBehaviour
 
         if (enemy != null)
         {
-            enemy.GetBubbled();
+            bool isFullCharge =
+                transform.localScale.x >= maxScale * 0.99f;
+
+            enemy.HitByBubble(isFullCharge);
 
             Destroy(gameObject);
         }

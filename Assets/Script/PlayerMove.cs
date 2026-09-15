@@ -8,33 +8,80 @@ public class PlayerMove : MonoBehaviour
     [Header("空中移動")]
     [SerializeField] private float airAcceleration = 10f;
 
-   
-
     [Header("アニメーション")]
     [SerializeField] private Animator animator;
+
     [Header("ジェットパック")]
     [SerializeField] private GameObject jetFlame;
     [SerializeField] private float jetpackForce = 8f;
     [SerializeField] private float jetpackMaxSpeed = 5f;
-    [Header("画面端制限")]
+
+    [Header("ダッシュ")]
+    [SerializeField] private float dashSpeed = 15f;
+    [SerializeField] private float dashDuration = 0.25f;
+    [SerializeField] private float dashRange = 3f;
+
+    [Header("画面端")]
     [SerializeField] private float screenMargin = 0.5f;
+
     private Rigidbody2D rb;
+
+    private bool isDashing = false;
+    private float dashTimer = 0f;
+
+    // ダッシュする方向
+    private Vector2 dashDirection;
+
+    private float normalGravityScale;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+
+        normalGravityScale = rb.gravityScale;
     }
 
     private void Update()
     {
         Move();
         Jump();
+        Dash();
         UpdateAnimation();
         LimitToScreen();
+        UpdateDashUI();
+    }
+
+    private void FixedUpdate()
+    {
+        if (isDashing)
+        {
+            rb.velocity = dashDirection * dashSpeed;
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (!isDashing)
+        {
+            return;
+        }
+
+        Enemy enemy = collision.gameObject.GetComponent<Enemy>();
+
+        if (enemy != null && enemy.IsBubbled)
+        {
+            enemy.Defeat();
+        }
     }
 
     private void Move()
     {
+        // ダッシュ中は通常移動しない
+        if (isDashing)
+        {
+            return;
+        }
+
         float horizontal = Input.GetAxisRaw("Horizontal");
 
         // 地上
@@ -62,35 +109,152 @@ public class PlayerMove : MonoBehaviour
             );
         }
 
-        // 左右で向きを変更
+        // 向き
         if (horizontal < 0)
         {
-            transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+            transform.rotation =
+                Quaternion.Euler(0f, 0f, 0f);
         }
         else if (horizontal > 0)
         {
-            transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            transform.rotation =
+                Quaternion.Euler(0f, 180f, 0f);
         }
     }
 
     private void Jump()
     {
-        if (Input.GetKey(KeyCode.W))
+        // ダッシュ中はジェットパックを使わない
+        if (isDashing)
         {
-            // 上昇速度に上限をつける
+            if (jetFlame != null)
+            {
+                jetFlame.SetActive(false);
+            }
+
+            return;
+        }
+
+        if (Input.GetKey(KeyCode.Space))
+        {
             if (rb.velocity.y < jetpackMaxSpeed)
             {
                 rb.AddForce(Vector2.up * jetpackForce);
             }
 
-            // 炎ON
-            jetFlame.SetActive(true);
+            if (jetFlame != null)
+            {
+                jetFlame.SetActive(true);
+            }
         }
         else
         {
-            // Spaceを離したら炎OFF
-            jetFlame.SetActive(false);
+            if (jetFlame != null)
+            {
+                jetFlame.SetActive(false);
+            }
         }
+    }
+
+    private void Dash()
+    {
+        // Shiftを押したらダッシュ開始
+        if (Input.GetKeyDown(KeyCode.LeftShift) && !isDashing)
+        {
+            StartDash();
+        }
+
+        if (isDashing)
+        {
+            dashTimer -= Time.deltaTime;
+
+            if (dashTimer <= 0f)
+            {
+                EndDash();
+            }
+        }
+    }
+
+    private void StartDash()
+    {
+        // 近くの泡状態の敵を探す
+        Enemy targetEnemy = FindNearestBubbledEnemy();
+
+        // 泡状態の敵がいなければダッシュしない
+        if (targetEnemy == null)
+        {
+            Debug.Log("近くに泡状態の敵がいません");
+            return;
+        }
+
+        // ダッシュ開始
+        isDashing = true;
+
+        dashTimer = dashDuration;
+
+        // 敵の方向を計算
+        Vector2 direction =
+            targetEnemy.transform.position - transform.position;
+
+        dashDirection = direction.normalized;
+
+        // 重力OFF
+        rb.gravityScale = 0f;
+
+        // 敵の方向へダッシュ
+        rb.velocity = dashDirection * dashSpeed;
+
+        Debug.Log(
+            "ダッシュ開始！ ターゲット: " +
+            targetEnemy.name
+        );
+    }
+
+    private void EndDash()
+    {
+        isDashing = false;
+
+        // 重力を元に戻す
+        rb.gravityScale = normalGravityScale;
+
+        // 横方向の速度を止める
+        rb.velocity = new Vector2(
+            0f,
+            rb.velocity.y
+        );
+    }
+
+    private Enemy FindNearestBubbledEnemy()
+    {
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+
+        Enemy nearestEnemy = null;
+
+        float nearestDistance = dashRange;
+
+        foreach (Enemy enemy in enemies)
+        {
+            // 泡状態じゃない敵は対象外
+            if (!enemy.IsBubbled)
+            {
+                continue;
+            }
+
+            float distance =
+                Vector2.Distance(
+                    transform.position,
+                    enemy.transform.position
+                );
+
+            // ダッシュ範囲内で一番近い敵
+            if (distance <= nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+
+        return nearestEnemy;
     }
 
     private bool IsGrounded()
@@ -106,18 +270,26 @@ public class PlayerMove : MonoBehaviour
     {
         float horizontal = Input.GetAxisRaw("Horizontal");
 
-        bool isWalking = horizontal != 0;
+        bool isWalking =
+            horizontal != 0 && !isDashing;
 
-        animator.SetBool("IsWalking", isWalking);
+        if (animator != null)
+        {
+            animator.SetBool(
+                "IsWalking",
+                isWalking
+            );
+        }
     }
+
     private void LimitToScreen()
     {
-        Vector3 viewPos = Camera.main.WorldToViewportPoint(transform.position);
+        Vector3 viewPos =
+            Camera.main.WorldToViewportPoint(
+                transform.position
+            );
 
-        // =========================
-        // 左右：反対側から出てくる
-        // =========================
-
+        // 左右：画面外に出たら反対側へ
         if (viewPos.x < 0f)
         {
             viewPos.x = 1f;
@@ -127,15 +299,11 @@ public class PlayerMove : MonoBehaviour
             viewPos.x = 0f;
         }
 
-        // =========================
         // 上：画面外に出ない
-        // =========================
-
         if (viewPos.y > 1f)
         {
             viewPos.y = 1f;
 
-            // 上方向の速度を止める
             if (rb.velocity.y > 0f)
             {
                 rb.velocity = new Vector2(
@@ -145,6 +313,37 @@ public class PlayerMove : MonoBehaviour
             }
         }
 
-        transform.position = Camera.main.ViewportToWorldPoint(viewPos);
+        transform.position =
+            Camera.main.ViewportToWorldPoint(
+                viewPos
+            );
+    }
+
+    private void UpdateDashUI()
+    {
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+
+        foreach (Enemy enemy in enemies)
+        {
+            if (!enemy.IsBubbled)
+            {
+                continue;
+            }
+
+            float distance =
+                Vector2.Distance(
+                    transform.position,
+                    enemy.transform.position
+                );
+
+            if (distance <= dashRange)
+            {
+                enemy.ShowDashUI(true);
+            }
+            else
+            {
+                enemy.ShowDashUI(false);
+            }
+        }
     }
 }
