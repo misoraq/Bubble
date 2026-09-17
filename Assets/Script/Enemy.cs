@@ -21,7 +21,14 @@ public class Enemy : MonoBehaviour
     [SerializeField] private GameObject dashUI;
     private int currentHits = 0;
     private bool isBubbled = false;
+    [Header("ƒ_ƒbƒVƒ…Õ“Ë")]
+    [SerializeField] private float dashKnockbackSpeed = 4f;
+    [SerializeField] private float dashKnockbackTime = 0.2f;
+  
 
+    
+    private Rigidbody2D rb;
+    private float knockbackTimer = 0f;
     private float bubbleTimer = 0f;
 
     private void Update()
@@ -40,6 +47,19 @@ public class Enemy : MonoBehaviour
             {
                 ReleaseBubble();
             }
+        }
+        if (knockbackTimer > 0f)
+        {
+            knockbackTimer -= Time.deltaTime;
+
+            if (knockbackTimer <= 0f)
+            {
+                rb.velocity = Vector2.zero;
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            StartInflating();
         }
     }
 
@@ -177,4 +197,33 @@ public class Enemy : MonoBehaviour
 
         Destroy(gameObject);
     }
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+       
+    }
+    public void DashKnockback(Vector2 direction)
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        direction = direction.normalized;
+
+        rb.MovePosition(
+            rb.position + direction * dashKnockbackSpeed * dashKnockbackTime
+        );
+    }
+    public void StartInflating()
+    {
+        Animator animator = GetComponent<Animator>();
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Inflate");
+        }
+    }
+
+  
 }

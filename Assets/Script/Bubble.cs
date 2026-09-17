@@ -2,21 +2,32 @@ using UnityEngine;
 
 public class Bubble : MonoBehaviour
 {
-    [Header("移動")]
     [SerializeField] private float moveSpeed = 5f;
 
-    [Header("シャボン玉")]
     [SerializeField] private float startScale = 0.05f;
     [SerializeField] private float maxScale = 0.2f;
     [SerializeField] private float growSpeed = 0.1f;
 
     private float moveDirection;
+
     private bool isCharging = false;
     private bool isShot = false;
 
+    private Collider2D bubbleCollider;
+
+    private void Awake()
+    {
+        bubbleCollider = GetComponent<Collider2D>();
+
+        // チャージ中は敵に当たらない
+        if (bubbleCollider != null)
+        {
+            bubbleCollider.enabled = false;
+        }
+    }
+
     private void Start()
     {
-        // 最初は小さい状態
         transform.localScale = Vector3.one * startScale;
     }
 
@@ -24,6 +35,12 @@ public class Bubble : MonoBehaviour
     {
         isCharging = true;
         isShot = false;
+
+        // チャージ中はCollider OFF
+        if (bubbleCollider != null)
+        {
+            bubbleCollider.enabled = false;
+        }
     }
 
     public void Charge()
@@ -33,14 +50,14 @@ public class Bubble : MonoBehaviour
             return;
         }
 
-        // 徐々に大きくする
         float newScale =
-            transform.localScale.x + growSpeed * Time.deltaTime;
+            transform.localScale.x +
+            growSpeed * Time.deltaTime;
 
-        // 最大サイズを超えないようにする
         newScale = Mathf.Min(newScale, maxScale);
 
-        transform.localScale = Vector3.one * newScale;
+        transform.localScale =
+            Vector3.one * newScale;
     }
 
     public void SetDirection(float direction)
@@ -52,20 +69,28 @@ public class Bubble : MonoBehaviour
     {
         isCharging = false;
         isShot = true;
+
+        // 発射した瞬間にCollider ON
+        if (bubbleCollider != null)
+        {
+            bubbleCollider.enabled = true;
+        }
     }
 
     private void Update()
     {
-        // 発射されるまでは動かさない
         if (!isShot)
         {
             return;
         }
 
-        // 横方向へ移動
         transform.position +=
-            Vector3.right * moveDirection * moveSpeed * Time.deltaTime;
+            Vector3.right *
+            moveDirection *
+            moveSpeed *
+            Time.deltaTime;
     }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         Enemy enemy = other.GetComponent<Enemy>();

@@ -28,7 +28,7 @@ public class PlayerMove : MonoBehaviour
 
     private bool isDashing = false;
     private float dashTimer = 0f;
-
+    private float bounceTimer = 0f;
     // ダッシュする方向
     private Vector2 dashDirection;
 
@@ -61,19 +61,69 @@ public class PlayerMove : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (!isDashing)
+        Debug.Log("衝突した相手 : " + collision.gameObject.name);
+        Enemy enemy = collision.gameObject.GetComponent<Enemy>();
+
+        if (enemy == null)
         {
             return;
         }
 
-        Enemy enemy = collision.gameObject.GetComponent<Enemy>();
-
-        if (enemy != null && enemy.IsBubbled)
+        // ダッシュ中
+        if (isDashing)
         {
-            enemy.Defeat();
+            if (enemy.IsBubbled)
+            {
+                enemy.Defeat();
+            }
+            else
+            {
+                Vector2 knockbackDirection =
+                    (enemy.transform.position - transform.position).normalized;
+
+                enemy.DashKnockback(knockbackDirection);
+            }
+
+            return;
+        }
+
+        // EnemyからPlayerへ向かう方向
+        Vector2 direction =
+            (transform.position - enemy.transform.position).normalized;
+
+        float bouncePower = 3f;
+
+        // 横から当たった場合
+        if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+        {
+            bounceTimer = 0.15f;
+
+            // Playerを反発
+            rb.velocity = new Vector2(
+                Mathf.Sign(direction.x) * 2f,
+                rb.velocity.y
+            );
+
+            // Enemyも少し反発
+            Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
+
+            if (enemyRb != null)
+            {
+                enemyRb.velocity = new Vector2(
+                    -Mathf.Sign(direction.x) * 1.5f,
+                    enemyRb.velocity.y
+                );
+            }
+        }
+        // 上下から当たった場合
+        else
+        {
+            rb.velocity = new Vector2(
+                rb.velocity.x,
+                Mathf.Sign(direction.y) * bouncePower
+            );
         }
     }
-
     private void Move()
     {
         // ダッシュ中は通常移動しない
@@ -81,7 +131,11 @@ public class PlayerMove : MonoBehaviour
         {
             return;
         }
-
+        if (bounceTimer > 0f)
+        {
+            bounceTimer -= Time.deltaTime;
+            return;
+        }
         float horizontal = Input.GetAxisRaw("Horizontal");
 
         // 地上
