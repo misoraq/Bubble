@@ -24,15 +24,74 @@ public class Enemy : MonoBehaviour
     [Header("É_ÉbÉVÉÖè’ìÀ")]
     [SerializeField] private float dashKnockbackSpeed = 4f;
     [SerializeField] private float dashKnockbackTime = 0.2f;
-  
 
-    
+    [Header("Playerí«ê’")]
+    [SerializeField] private float chaseSpeed = 2f;
+
+    [Header("ìGÇÃñcí£")]
+    [SerializeField] private float normalScale = 0.3f;
+    [SerializeField] private float maxInflateScale = 0.6f;
+
+    private float originalScaleX;
+    private float originalScaleY;
+    private float originalScaleZ;
+
+    [Header("ìGÇÃñAçUåÇ")]
+    [SerializeField] private GameObject enemyBubblePrefab;
+    [SerializeField] private Transform attackMuzzle;
+    [SerializeField] private float attackCooldown = 3f;
+
+    private float attackTimer = 0f;
+
     private Rigidbody2D rb;
     private float knockbackTimer = 0f;
     private float bubbleTimer = 0f;
+    private Transform player;
+    private bool isAttacking = false;
+    private void Start()
+    {
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
 
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
+    }
     private void Update()
     {
+        if (player != null && !isBubbled)
+        {
+            ChasePlayer();
+        }
+        if (player != null && !isAttacking)
+        {
+            if (player.position.x < transform.position.x)
+            {
+                transform.localScale = new Vector3(
+                    Mathf.Abs(transform.localScale.x),
+                    transform.localScale.y,
+                    transform.localScale.z
+                );
+            }
+            else
+            {
+                transform.localScale = new Vector3(
+                    -Mathf.Abs(transform.localScale.x),
+                    transform.localScale.y,
+                    transform.localScale.z
+                );
+            }
+        }
+        if (player != null && !isBubbled)
+        {
+            attackTimer -= Time.deltaTime;
+
+            if (attackTimer <= 0f)
+            {
+                ShootEnemyBubble();
+                attackTimer = attackCooldown;
+            }
+        }
         if (isBubbled)
         {
             // ìGÇè„Ç…ïÇÇ©ÇπÇÈ
@@ -57,10 +116,7 @@ public class Enemy : MonoBehaviour
                 rb.velocity = Vector2.zero;
             }
         }
-        if (Input.GetKeyDown(KeyCode.T))
-        {
-            StartInflating();
-        }
+
     }
 
     public void HitByBubble(bool isFullCharge)
@@ -107,6 +163,7 @@ public class Enemy : MonoBehaviour
     {
         isBubbled = true;
 
+        attackTimer = attackCooldown;
         bubbleTimer = bubbleTime;
 
         if (bubbleVisual != null)
@@ -131,13 +188,14 @@ public class Enemy : MonoBehaviour
 
     private void ReleaseBubble()
     {
+
         isBubbled = false;
 
         if (bubbleVisual != null)
         {
             bubbleVisual.SetActive(false);
         }
-
+        attackTimer = attackCooldown;
         if (dashUI != null)
         {
             dashUI.SetActive(false);
@@ -215,15 +273,81 @@ public class Enemy : MonoBehaviour
             rb.position + direction * dashKnockbackSpeed * dashKnockbackTime
         );
     }
-    public void StartInflating()
-    {
-        Animator animator = GetComponent<Animator>();
 
-        if (animator != null)
-        {
-            animator.SetTrigger("Inflate");
-        }
+    public void SyncInflate(float amount)
+    {
+        amount = Mathf.Clamp01(amount);
+
+        float scale = Mathf.Lerp(
+            normalScale,
+            maxInflateScale,
+            amount
+        );
+
+        float directionX = Mathf.Sign(transform.localScale.x);
+
+        transform.localScale = new Vector3(
+            directionX * scale,
+            scale,
+            scale
+        );
     }
 
-  
+    public void ResetInflate()
+    {
+        float directionX = Mathf.Sign(transform.localScale.x);
+
+        transform.localScale = new Vector3(
+            directionX * normalScale,
+            normalScale,
+            normalScale
+        );
+    }
+    private void ShootEnemyBubble()
+    {
+        if (enemyBubblePrefab == null || attackMuzzle == null)
+            return;
+
+        isAttacking = true;
+
+        GameObject bubbleObject = Instantiate(
+     enemyBubblePrefab,
+     attackMuzzle.position,
+     Quaternion.identity,
+     attackMuzzle
+ );
+
+        EnemyBubble enemyBubble =
+            bubbleObject.GetComponentInChildren<EnemyBubble>();
+
+        if (enemyBubble == null)
+        {
+            Debug.LogError("EnemyBubble.csÇ™PrefabÇ…å©Ç¬Ç©ÇËÇ‹ÇπÇÒÅI");
+            return;
+        }
+
+        enemyBubble.SetOwner(this);
+
+        if (player != null)
+        {
+            enemyBubble.SetDirection(
+                Mathf.Sign(
+                    player.position.x -
+                    transform.position.x
+                )
+            );
+        }
+    }
+    private void ChasePlayer()
+    {
+        float direction =
+            Mathf.Sign(player.position.x - transform.position.x);
+
+        rb.velocity = new Vector2(
+            direction * chaseSpeed,
+            rb.velocity.y
+        );
+    }
+
+
 }

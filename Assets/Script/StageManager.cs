@@ -1,6 +1,6 @@
 using UnityEngine;
 using TMPro;
-
+using UnityEngine.SceneManagement;
 public class StageManager : MonoBehaviour
 {
     [Header("ƒNƒŠƒAUI")]
@@ -97,5 +97,13 @@ public class StageManager : MonoBehaviour
                 starText.text = "š";
             }
         }
+    }
+    public void RetryStage()
+    {
+        Time.timeScale = 1f;
+
+        Scene currentScene = SceneManager.GetActiveScene();
+
+        SceneManager.LoadScene(currentScene.name);
     }
 }
