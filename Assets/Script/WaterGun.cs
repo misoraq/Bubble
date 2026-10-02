@@ -5,12 +5,23 @@ public class WaterGun : MonoBehaviour
     [Header("水鉄砲")]
     [SerializeField] private Transform muzzle;
     [SerializeField] private GameObject bubblePrefab;
+    [Header("水鉄砲の水")]
+    [SerializeField] private int maxWater = 10;
+    [SerializeField] private int currentWater = 10;
+    [SerializeField] private int waterCost = 1;
+    [Header("ゲームオーバー")]
+    [SerializeField] private GameOverEffect gameOverEffect;
 
+    private bool isGameOver = false;
     private GameObject chargingBubble;
     private Bubble chargingBubbleScript;
 
     private void Update()
     {
+        if (isGameOver)
+        {
+            return;
+        }
         // 左クリックを押した瞬間
         if (Input.GetMouseButtonDown(0))
         {
@@ -32,14 +43,18 @@ public class WaterGun : MonoBehaviour
 
     private void StartCharging()
     {
-        // シャボン玉を銃口に生成
+        // 水が足りなければ撃てない
+        if (currentWater < waterCost)
+        {
+            return;
+        }
+
         chargingBubble = Instantiate(
             bubblePrefab,
             muzzle.position,
             muzzle.rotation
         );
 
-        // Bubbleスクリプトを取得
         chargingBubbleScript = chargingBubble.GetComponent<Bubble>();
 
         if (chargingBubbleScript != null)
@@ -86,8 +101,68 @@ public class WaterGun : MonoBehaviour
         // 発射状態にする
         chargingBubbleScript.Shoot();
 
+        currentWater -= waterCost;
+
+        currentWater = Mathf.Max(currentWater, 0);
+
+        if (currentWater <= 0)
+        {
+            GameOver();
+        }
+
         // 参照をリセット
         chargingBubble = null;
         chargingBubbleScript = null;
+    }
+    public int GetCurrentWater()
+    {
+        return currentWater;
+    }
+
+    public int GetMaxWater()
+    {
+        return maxWater;
+    }
+    private void GameOver()
+    {
+        if (isGameOver)
+        {
+            return;
+        }
+
+        isGameOver = true;
+
+        Debug.Log("水残量0！ GAME OVER");
+
+        // 全ての敵を停止
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+
+        foreach (Enemy enemy in enemies)
+        {
+            enemy.StopForGameOver();
+        }
+
+        // GameOver演出
+        if (gameOverEffect != null)
+        {
+            gameOverEffect.StartGameOver();
+        }
+    }
+    public void TakeDamage(int damage)
+    {
+        if (isGameOver)
+        {
+            return;
+        }
+
+        currentWater -= damage;
+        currentWater = Mathf.Max(currentWater, 0);
+
+        Debug.Log("ダメージ！ 水残量 : " + currentWater);
+
+        if (currentWater <= 0)
+        {
+            GameOver();
+        }
     }
 }

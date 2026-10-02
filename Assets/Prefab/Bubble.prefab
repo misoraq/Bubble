@@ -138,3 +138,4 @@ MonoBehaviour:
   startScale: 0.05
   maxScale: 0.2
   growSpeed: 0.1
+  maxChargeOffset: 0.01

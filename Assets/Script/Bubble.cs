@@ -8,6 +8,11 @@ public class Bubble : MonoBehaviour
     [SerializeField] private float maxScale = 0.2f;
     [SerializeField] private float growSpeed = 0.1f;
 
+    [Header("チャージ中の前進")]
+    [SerializeField] private float maxChargeOffset = 0.15f;
+
+    private float previousChargeOffset = 0f;
+
     private float moveDirection;
 
     private bool isCharging = false;
@@ -35,6 +40,7 @@ public class Bubble : MonoBehaviour
     {
         isCharging = true;
         isShot = false;
+        previousChargeOffset = 0f;
 
         // チャージ中はCollider OFF
         if (bubbleCollider != null)
@@ -58,6 +64,36 @@ public class Bubble : MonoBehaviour
 
         transform.localScale =
             Vector3.one * newScale;
+
+
+        // =========================
+        // チャージ量に応じて少し前へ出す
+        // =========================
+
+        float chargeAmount =
+            Mathf.InverseLerp(
+                startScale,
+                maxScale,
+                newScale
+            );
+
+        float chargeOffset =
+            Mathf.Lerp(
+                0f,
+                maxChargeOffset,
+                chargeAmount
+            );
+
+        float offsetDelta =
+            chargeOffset -
+            previousChargeOffset;
+
+        transform.position +=
+            Vector3.right *
+            moveDirection *
+            offsetDelta;
+
+        previousChargeOffset = chargeOffset;
     }
 
     public void SetDirection(float direction)

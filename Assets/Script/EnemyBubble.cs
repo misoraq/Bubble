@@ -10,6 +10,10 @@ public class EnemyBubble : MonoBehaviour
     [Header("”­Ë")]
     [SerializeField] private float moveSpeed = 4f;
 
+    [Header("–A‚ªŒû‚©‚ç—£‚ê‚é‹——£")]
+    [SerializeField] private float maxChargeOffset = 0.25f;
+
+    private Vector3 startLocalPosition;
     private bool isCharging = true;
     private bool isShot = false;
 
@@ -21,12 +25,23 @@ public class EnemyBubble : MonoBehaviour
     private void Start()
     {
         transform.localScale = Vector3.one * startScale;
-    }
 
+        // Œû‚©‚ç‚ÌÅ‰‚ÌˆÊ’u‚ğ•Û‘¶
+        startLocalPosition = transform.localPosition;
+    }
     private void Update()
     {
         if (isCharging)
         {
+             // “G‚ªƒvƒŒƒCƒ„[‚Ì–A‚Å•ï‚Ü‚ê‚½‚çUŒ‚ƒ`ƒƒ[ƒW‚ğƒLƒƒƒ“ƒZƒ‹
+        if (ownerEnemy != null && ownerEnemy.IsBubbled)
+        {
+                ownerEnemy.ResetInflateSmooth(0.2f);
+                ownerEnemy.EndAttack();
+
+            Destroy(gameObject);
+            return;
+        }
             float newScale =
                 transform.localScale.x + growSpeed * Time.deltaTime;
 
@@ -37,13 +52,24 @@ public class EnemyBubble : MonoBehaviour
 
             // –A‚Ì–c’£—¦‚ğ0`1‚É•ÏŠ·
             float inflateAmount =
-                Mathf.InverseLerp(
-                    startScale,
-                    maxScale,
-                    newScale
+    Mathf.InverseLerp(
+        startScale,
+        maxScale,
+        newScale
+    );
+
+            // –A‚ª‘å‚«‚­‚È‚é‚Ù‚ÇŒû‚©‚ç—£‚·
+            float chargeOffset =
+                Mathf.Lerp(
+                    0f,
+                    maxChargeOffset,
+                    inflateAmount
                 );
 
-            // “G–{‘Ì‚à“¯‚¶Š„‡‚Å–c‚ç‚Ü‚¹‚é
+            transform.localPosition =
+                startLocalPosition +
+                Vector3.left * chargeOffset;
+
             if (ownerEnemy != null)
             {
                 ownerEnemy.SyncInflate(inflateAmount);
@@ -67,12 +93,15 @@ public class EnemyBubble : MonoBehaviour
         isCharging = false;
         isShot = true;
 
-        // “G‚©‚çØ‚è—£‚·
+        // “G‚©‚ç–A‚ğØ‚è—£‚·
         transform.SetParent(null);
 
         if (ownerEnemy != null)
         {
-            ownerEnemy.ResetInflate();
+            ownerEnemy.ResetInflateSmooth(0.6f);
+
+            // “G‚ÌUŒ‚I—¹
+            ownerEnemy.EndAttack();
         }
     }
 
@@ -86,13 +115,12 @@ public class EnemyBubble : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             Debug.Log("“G‚Ì–A‚ªPlayer‚É–½’†I");
+            WaterGun waterGun =
+                FindObjectOfType<WaterGun>();
 
-            PlayerBubbleUI bubbleUI =
-                FindObjectOfType<PlayerBubbleUI>();
-
-            if (bubbleUI != null)
+            if (waterGun != null)
             {
-                bubbleUI.TakeDamage();
+                waterGun.TakeDamage(1);
             }
 
             Destroy(gameObject);

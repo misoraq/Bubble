@@ -36,10 +36,20 @@ public class Enemy : MonoBehaviour
     private float originalScaleY;
     private float originalScaleZ;
 
+    [Header("å¸Ç´êßå‰")]
+    [SerializeField] private float turnThreshold = 0.3f;
+    [SerializeField] private float turnCooldown = 0.2f;
+
+    private float turnTimer = 0f;
+
     [Header("ìGÇÃñAçUåÇ")]
     [SerializeField] private GameObject enemyBubblePrefab;
     [SerializeField] private Transform attackMuzzle;
     [SerializeField] private float attackCooldown = 3f;
+
+    [Header("ìGçUåÇñAÇÃà íu")]
+    [SerializeField] private float attackBubbleOffsetX = 0.15f;
+
 
     private float attackTimer = 0f;
 
@@ -48,6 +58,10 @@ public class Enemy : MonoBehaviour
     private float bubbleTimer = 0f;
     private Transform player;
     private bool isAttacking = false;
+    private bool isGameOverStopped = false;
+    private bool isSpawning = false;
+
+    private SpriteRenderer spriteRenderer;
     private void Start()
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
@@ -59,27 +73,67 @@ public class Enemy : MonoBehaviour
     }
     private void Update()
     {
-        if (player != null && !isBubbled)
+        if (isGameOverStopped)
+        {
+            return;
+        }
+
+        if (isSpawning)
+        {
+            return;
+        }
+
+        if (player != null && !isBubbled && !isAttacking)
         {
             ChasePlayer();
         }
-        if (player != null && !isAttacking)
+        // =========================
+        // ìGÇÃå¸Ç´
+        // =========================
+        if (player != null)
         {
-            if (player.position.x < transform.position.x)
+            turnTimer -= Time.deltaTime;
+
+            float distanceX =
+                player.position.x - transform.position.x;
+
+            // àÍíËà»è„Xï˚å¸Ç…ó£ÇÍÇƒÇ¢ÇÈèÍçáÇæÇØå¸Ç´ÇïœçX
+            if (Mathf.Abs(distanceX) > turnThreshold)
             {
-                transform.localScale = new Vector3(
-                    Mathf.Abs(transform.localScale.x),
-                    transform.localScale.y,
-                    transform.localScale.z
-                );
-            }
-            else
-            {
-                transform.localScale = new Vector3(
-                    -Mathf.Abs(transform.localScale.x),
-                    transform.localScale.y,
-                    transform.localScale.z
-                );
+                // ç∂âEÇîªíË
+                bool playerIsLeft = distanceX < 0f;
+
+                bool enemyIsFacingLeft =
+                    transform.localScale.x > 0f;
+
+                // å¸Ç´ÇïœÇ¶ÇÈïKóvÇ™Ç†ÇÈÇ©
+                bool needTurn =
+                    playerIsLeft != enemyIsFacingLeft;
+
+                // è≠Çµéûä‘ÇãÛÇØÇƒÇ©ÇÁîΩì]
+                if (needTurn && turnTimer <= 0f)
+                {
+                    if (playerIsLeft)
+                    {
+                        // ç∂
+                        transform.localScale = new Vector3(
+                            Mathf.Abs(transform.localScale.x),
+                            transform.localScale.y,
+                            transform.localScale.z
+                        );
+                    }
+                    else
+                    {
+                        // âE
+                        transform.localScale = new Vector3(
+                            -Mathf.Abs(transform.localScale.x),
+                            transform.localScale.y,
+                            transform.localScale.z
+                        );
+                    }
+
+                    turnTimer = turnCooldown;
+                }
             }
         }
         if (player != null && !isBubbled)
@@ -94,14 +148,21 @@ public class Enemy : MonoBehaviour
         }
         if (isBubbled)
         {
-            // ìGÇè„Ç…ïÇÇ©ÇπÇÈ
+            // è„Ç÷ïÇÇ©Ç‘
             transform.position +=
                 Vector3.up * floatSpeed * Time.deltaTime;
 
-            // ñAÇÃéûä‘Çå∏ÇÁÇ∑
+            // äÆëSÇ…âÊñ äOÇ÷èoÇΩÇÁåÇîj
+            if (IsAboveScreen())
+            {
+                Defeat();
+                return;
+            }
+
+            // ñAÇÃécÇËéûä‘Çå∏ÇÁÇ∑
             bubbleTimer -= Time.deltaTime;
 
-            // éûä‘êÿÇÍ
+            // éûä‘êÿÇÍÇ»ÇÁìGÇâï˙
             if (bubbleTimer <= 0f)
             {
                 ReleaseBubble();
@@ -230,27 +291,12 @@ public class Enemy : MonoBehaviour
 
         Debug.Log("ìGÇåÇîjÅI");
 
-        ComboManager comboManager =
-            FindObjectOfType<ComboManager>();
+        StageManager stageManager =
+            FindObjectOfType<StageManager>();
 
-        if (comboManager != null)
+        if (stageManager != null)
         {
-            comboManager.AddCombo();
-        }
-
-        ScoreManager scoreManager =
-            FindObjectOfType<ScoreManager>();
-
-        if (scoreManager != null)
-        {
-            int comboCount = 1;
-
-            if (comboManager != null)
-            {
-                comboCount = comboManager.GetComboCount();
-            }
-
-            scoreManager.AddScore(comboCount);
+            stageManager.AddDefeatedEnemy();
         }
 
         Destroy(gameObject);
@@ -258,7 +304,7 @@ public class Enemy : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-       
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
     public void DashKnockback(Vector2 direction)
     {
@@ -293,9 +339,38 @@ public class Enemy : MonoBehaviour
         );
     }
 
-    public void ResetInflate()
+    public void ResetInflateSmooth(float duration)
     {
+        StartCoroutine(ResetInflateCoroutine(duration));
+    }
+
+    private System.Collections.IEnumerator ResetInflateCoroutine(float duration)
+    {
+        float startScale = Mathf.Abs(transform.localScale.x);
+        float time = 0f;
+
         float directionX = Mathf.Sign(transform.localScale.x);
+
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+
+            float t = Mathf.Clamp01(time / duration);
+
+            float scale = Mathf.Lerp(
+                startScale,
+                normalScale,
+                t
+            );
+
+            transform.localScale = new Vector3(
+                directionX * scale,
+                scale,
+                scale
+            );
+
+            yield return null;
+        }
 
         transform.localScale = new Vector3(
             directionX * normalScale,
@@ -310,12 +385,18 @@ public class Enemy : MonoBehaviour
 
         isAttacking = true;
 
+        float directionX = Mathf.Sign(transform.localScale.x);
+
+        Vector3 bubblePosition =
+            attackMuzzle.position +
+            new Vector3(directionX * attackBubbleOffsetX, 0f, 0f);
+
         GameObject bubbleObject = Instantiate(
-     enemyBubblePrefab,
-     attackMuzzle.position,
-     Quaternion.identity,
-     attackMuzzle
- );
+            enemyBubblePrefab,
+            bubblePosition,
+            Quaternion.identity,
+            attackMuzzle
+        );
 
         EnemyBubble enemyBubble =
             bubbleObject.GetComponentInChildren<EnemyBubble>();
@@ -348,6 +429,59 @@ public class Enemy : MonoBehaviour
             rb.velocity.y
         );
     }
+    public void EndAttack()
+    {
+        isAttacking = false;
+    }
+    public void StopForGameOver()
+    {
+        if (isGameOverStopped)
+        {
+            return;
+        }
 
+        isGameOverStopped = true;
 
+        // à⁄ìÆÇäÆëSÇ…í‚é~
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+            rb.simulated = false;
+        }
+
+        // çUåÇíÜÇ‡âèú
+        isAttacking = false;
+    }
+    private bool IsAboveScreen()
+    {
+        if (Camera.main == null || spriteRenderer == null)
+        {
+            return false;
+        }
+
+        float cameraTop =
+            Camera.main.ViewportToWorldPoint(
+                new Vector3(0.5f, 1f, 0f)
+            ).y;
+
+        return spriteRenderer.bounds.min.y > cameraTop;
+    }
+    public void StartSpawnSequence()
+    {
+        isSpawning = true;
+
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+        }
+
+        isAttacking = false;
+    }
+    public void EndSpawnSequence()
+    {
+        isSpawning = false;
+
+        // èoåªíºå„Ç…ë¶çUåÇÇµÇ»Ç¢ÇÊÇ§Ç…Ç∑ÇÈ
+        attackTimer = attackCooldown;
+    }
 }

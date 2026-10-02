@@ -5,13 +5,14 @@ public class StageManager : MonoBehaviour
 {
     [Header("クリアUI")]
     [SerializeField] private GameObject clearPanel;
-    [SerializeField] private TMP_Text resultScoreText;
-    [SerializeField] private TMP_Text resultComboText;
     [SerializeField] private TMP_Text starText;
 
+    [Header("敵の撃破数")]
+    [SerializeField] private int defeatedEnemies = 0;
+
     [Header("★評価")]
-    [SerializeField] private int threeStarScore = 1000;
-    [SerializeField] private int twoStarScore = 500;
+    [SerializeField] private int threeStarKills = 8;
+    [SerializeField] private int twoStarKills = 5;
 
     private bool stageCleared = false;
 
@@ -43,52 +44,21 @@ public class StageManager : MonoBehaviour
         stageCleared = true;
 
         Debug.Log("ステージクリア！");
+        Debug.Log("最終撃破数 : " + defeatedEnemies);
 
         if (clearPanel != null)
         {
             clearPanel.SetActive(true);
         }
 
-        // ScoreManagerから現在のスコアを取得
-        ScoreManager scoreManager =
-            FindObjectOfType<ScoreManager>();
-
-        int finalScore = 0;
-
-        if (scoreManager != null)
-        {
-            finalScore = scoreManager.GetScore();
-
-            if (resultScoreText != null)
-            {
-                resultScoreText.text =
-                    "SCORE : " + finalScore;
-            }
-        }
-
-        // ComboManagerから最終コンボを取得
-        ComboManager comboManager =
-            FindObjectOfType<ComboManager>();
-
-        if (comboManager != null)
-        {
-            int finalCombo = comboManager.GetComboCount();
-
-            if (resultComboText != null)
-            {
-                resultComboText.text =
-                    "COMBO : " + finalCombo;
-            }
-        }
-
         // ★評価
         if (starText != null)
         {
-            if (finalScore >= threeStarScore)
+            if (defeatedEnemies >= threeStarKills)
             {
                 starText.text = "★★★";
             }
-            else if (finalScore >= twoStarScore)
+            else if (defeatedEnemies >= twoStarKills)
             {
                 starText.text = "★★";
             }
@@ -105,5 +75,11 @@ public class StageManager : MonoBehaviour
         Scene currentScene = SceneManager.GetActiveScene();
 
         SceneManager.LoadScene(currentScene.name);
+    }
+    public void AddDefeatedEnemy()
+    {
+        defeatedEnemies++;
+
+        Debug.Log("敵撃破数 : " + defeatedEnemies);
     }
 }
