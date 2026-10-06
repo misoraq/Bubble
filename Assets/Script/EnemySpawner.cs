@@ -5,151 +5,154 @@ public class EnemySpawner : MonoBehaviour
     [Header("敵Prefab")]
     [SerializeField] private GameObject enemyPrefab;
 
-    [Header("出現ルート")]
-    [SerializeField] private EnemySpawnRoute leftRoute;
-    [SerializeField] private EnemySpawnRoute rightRoute;
+    [Header("Wave設定")]
+    [SerializeField] private int totalWaves = 5;
+    [SerializeField] private float nextWaveDelay = 2f;
 
-    [Header("出現移動")]
-    [SerializeField] private float spawnMoveSpeed = 3f;
+    [Header("出現位置")]
+    [SerializeField] private float spawnOffsetX = 1f;
+    [SerializeField] private float minSpawnY = -3f;
+    [SerializeField] private float maxSpawnY = 3f;
 
-    private Enemy leftEnemy;
-    private Enemy rightEnemy;
+    private int currentWave = 0;
+    private bool waitingNextWave = false;
 
-    private Transform[] leftPoints;
-    private Transform[] rightPoints;
-
-    private int leftPointIndex = 1;
-    private int rightPointIndex = 1;
-
-    private bool leftArrived = false;
-    private bool rightArrived = false;
-
-    private bool aiStarted = false;
+    private Enemy enemy1;
+    private Enemy enemy2;
 
     private void Start()
     {
+        StageManager stageManager =
+            FindObjectOfType<StageManager>();
+
+        if (stageManager != null)
+        {
+            int totalEnemies =
+                totalWaves * 2;
+
+            stageManager.SetTotalEnemies(
+                totalEnemies
+            );
+        }
+
         SpawnEnemies();
     }
 
     private void Update()
     {
-        MoveEnemies();
+        CheckWaveEnd();
     }
 
     private void SpawnEnemies()
     {
-        leftPoints = leftRoute.GetRoutePoints();
-        rightPoints = rightRoute.GetRoutePoints();
+        currentWave++;
 
-        if (leftPoints.Length < 2 || rightPoints.Length < 2)
-        {
-            Debug.LogError("出現ルートには2個以上のPointが必要です！");
-            return;
-        }
-
-        // 左ルートの敵
-        GameObject leftObject = Instantiate(
-            enemyPrefab,
-            leftPoints[0].position,
-            Quaternion.identity
+        Debug.Log(
+            "Wave " +
+            currentWave +
+            " / " +
+            totalWaves
         );
 
-        leftEnemy = leftObject.GetComponent<Enemy>();
+        enemy1 = SpawnRandomEnemy();
+        enemy2 = SpawnRandomEnemy();
 
-        if (leftEnemy != null)
+        StageManager stageManager =
+            FindObjectOfType<StageManager>();
+
+        if (stageManager != null)
         {
-            leftEnemy.StartSpawnSequence();
-        }
-
-        // 右ルートの敵
-        GameObject rightObject = Instantiate(
-            enemyPrefab,
-            rightPoints[0].position,
-            Quaternion.identity
-        );
-
-        rightEnemy = rightObject.GetComponent<Enemy>();
-
-        if (rightEnemy != null)
-        {
-            rightEnemy.StartSpawnSequence();
+            stageManager.AddSpawnedEnemy();
+            stageManager.AddSpawnedEnemy();
         }
     }
 
-    private void MoveEnemies()
+    private Enemy SpawnRandomEnemy()
     {
-        MoveEnemyAlongRoute(
-            leftEnemy,
-            leftPoints,
-            ref leftPointIndex,
-            ref leftArrived
-        );
-
-        MoveEnemyAlongRoute(
-            rightEnemy,
-            rightPoints,
-            ref rightPointIndex,
-            ref rightArrived
-        );
-
-        // 2体とも最後まで到着
-        if (leftArrived && rightArrived && !aiStarted)
+        if (Camera.main == null)
         {
-            StartEnemyAI();
-        }
-    }
-
-    private void MoveEnemyAlongRoute(
-        Enemy enemy,
-        Transform[] points,
-        ref int pointIndex,
-        ref bool arrived
-    )
-    {
-        if (enemy == null || arrived)
-        {
-            return;
+            return null;
         }
 
-        Transform targetPoint = points[pointIndex];
+        // 左右どちらから出るかランダム
+        bool spawnFromLeft =
+            Random.value < 0.5f;
 
-        enemy.transform.position =
-            Vector3.MoveTowards(
-                enemy.transform.position,
-                targetPoint.position,
-                spawnMoveSpeed * Time.deltaTime
+        float spawnX;
+
+        if (spawnFromLeft)
+        {
+            spawnX =
+                Camera.main.ViewportToWorldPoint(
+                    new Vector3(0f, 0.5f, 0f)
+                ).x - spawnOffsetX;
+        }
+        else
+        {
+            spawnX =
+                Camera.main.ViewportToWorldPoint(
+                    new Vector3(1f, 0.5f, 0f)
+                ).x + spawnOffsetX;
+        }
+
+        // 高さをランダム
+        float spawnY =
+            Random.Range(
+                minSpawnY,
+                maxSpawnY
             );
 
-        // Pointに到着
-        if (Vector3.Distance(
-                enemy.transform.position,
-                targetPoint.position
-            ) < 0.01f)
-        {
-            pointIndex++;
+        Vector3 spawnPosition =
+            new Vector3(
+                spawnX,
+                spawnY,
+                0f
+            );
 
-            // 最後のPointまで到着
-            if (pointIndex >= points.Length)
-            {
-                arrived = true;
-            }
-        }
+        GameObject enemyObject =
+            Instantiate(
+                enemyPrefab,
+                spawnPosition,
+                Quaternion.identity
+            );
+
+        return enemyObject.GetComponent<Enemy>();
     }
 
-    private void StartEnemyAI()
+    private void CheckWaveEnd()
     {
-        aiStarted = true;
-
-        if (leftEnemy != null)
+        if (waitingNextWave)
         {
-            leftEnemy.EndSpawnSequence();
+            return;
         }
 
-        if (rightEnemy != null)
+        // 今のWaveの2体が残っている
+        if (enemy1 != null || enemy2 != null)
         {
-            rightEnemy.EndSpawnSequence();
+            return;
         }
 
-        Debug.Log("2体とも出現完了！AI開始！");
+        // 全Wave終了
+        if (currentWave >= totalWaves)
+        {
+            return;
+        }
+
+        StartCoroutine(
+            NextWaveCoroutine()
+        );
+    }
+
+    private System.Collections.IEnumerator NextWaveCoroutine()
+    {
+        waitingNextWave = true;
+
+        yield return new WaitForSeconds(
+            nextWaveDelay
+        );
+
+        waitingNextWave = false;
+
+        SpawnEnemies();
     }
 }

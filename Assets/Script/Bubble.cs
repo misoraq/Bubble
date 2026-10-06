@@ -141,4 +141,8 @@ public class Bubble : MonoBehaviour
             Destroy(gameObject);
         }
     }
+    public bool IsFullCharge()
+    {
+        return transform.localScale.x >= maxScale * 0.99f;
+    }
 }

@@ -60,8 +60,11 @@ public class Enemy : MonoBehaviour
     private bool isAttacking = false;
     private bool isGameOverStopped = false;
     private bool isSpawning = false;
-
+    [Header("‰æ–ÊãŒ‚”j”»’è")]
+    [SerializeField] private float defeatHeightOffset = 0.5f;
     private SpriteRenderer spriteRenderer;
+    [Header("Œ‚”j‚Ì…‰ñ•œ")]
+    [SerializeField] private int waterRecoveryAmount = 2;
     private void Start()
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
@@ -291,12 +294,24 @@ public class Enemy : MonoBehaviour
 
         Debug.Log("“G‚ğŒ‚”jI");
 
+        // Œ‚”j”‚ğ‘‚â‚·
         StageManager stageManager =
             FindObjectOfType<StageManager>();
 
         if (stageManager != null)
         {
             stageManager.AddDefeatedEnemy();
+        }
+
+        // …‚ğ‰ñ•œ
+        WaterGun waterGun =
+            FindObjectOfType<WaterGun>();
+
+        if (waterGun != null)
+        {
+            waterGun.RecoverWater(
+                waterRecoveryAmount
+            );
         }
 
         Destroy(gameObject);
@@ -464,7 +479,10 @@ public class Enemy : MonoBehaviour
                 new Vector3(0.5f, 1f, 0f)
             ).y;
 
-        return spriteRenderer.bounds.min.y > cameraTop;
+        float defeatLine =
+            cameraTop - defeatHeightOffset;
+
+        return spriteRenderer.bounds.center.y > defeatLine;
     }
     public void StartSpawnSequence()
     {

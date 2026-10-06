@@ -2,13 +2,20 @@ using UnityEngine;
 
 public class WaterGun : MonoBehaviour
 {
+    [Header("水切れ")]
+    [SerializeField] private float emptyGameOverTime = 3f;
+
+    private float emptyTimer = 0f;
+    private bool isWaterEmpty = false;
     [Header("水鉄砲")]
     [SerializeField] private Transform muzzle;
     [SerializeField] private GameObject bubblePrefab;
     [Header("水鉄砲の水")]
     [SerializeField] private int maxWater = 10;
     [SerializeField] private int currentWater = 10;
-    [SerializeField] private int waterCost = 1;
+    [Header("水消費")]
+    [SerializeField] private int normalWaterCost = 1;
+    [SerializeField] private int fullChargeWaterCost = 2;
     [Header("ゲームオーバー")]
     [SerializeField] private GameOverEffect gameOverEffect;
 
@@ -21,6 +28,10 @@ public class WaterGun : MonoBehaviour
         if (isGameOver)
         {
             return;
+        }
+        if (isWaterEmpty)
+        {
+            UpdateWaterEmpty();
         }
         // 左クリックを押した瞬間
         if (Input.GetMouseButtonDown(0))
@@ -44,7 +55,7 @@ public class WaterGun : MonoBehaviour
     private void StartCharging()
     {
         // 水が足りなければ撃てない
-        if (currentWater < waterCost)
+        if (currentWater < normalWaterCost)
         {
             return;
         }
@@ -101,13 +112,24 @@ public class WaterGun : MonoBehaviour
         // 発射状態にする
         chargingBubbleScript.Shoot();
 
+        int waterCost;
+
+        if (chargingBubbleScript.IsFullCharge())
+        {
+            waterCost = fullChargeWaterCost;
+        }
+        else
+        {
+            waterCost = normalWaterCost;
+        }
+
         currentWater -= waterCost;
 
         currentWater = Mathf.Max(currentWater, 0);
 
         if (currentWater <= 0)
         {
-            GameOver();
+            StartWaterEmpty();
         }
 
         // 参照をリセット
@@ -122,6 +144,42 @@ public class WaterGun : MonoBehaviour
     public int GetMaxWater()
     {
         return maxWater;
+    }
+    private void StartWaterEmpty()
+    {
+        if (isWaterEmpty)
+        {
+            return;
+        }
+
+        isWaterEmpty = true;
+        emptyTimer = emptyGameOverTime;
+
+        Debug.Log("水切れ！ 残り " + emptyTimer + " 秒");
+    }
+    private void UpdateWaterEmpty()
+    {
+        // 回復したら水切れ状態解除
+        if (currentWater > 0)
+        {
+            isWaterEmpty = false;
+
+            Debug.Log("水切れ状態から復帰！");
+
+            return;
+        }
+
+        emptyTimer -= Time.deltaTime;
+
+        Debug.Log(
+            "GAME OVERまで : " +
+            Mathf.CeilToInt(emptyTimer)
+        );
+
+        if (emptyTimer <= 0f)
+        {
+            GameOver();
+        }
     }
     private void GameOver()
     {
@@ -162,7 +220,30 @@ public class WaterGun : MonoBehaviour
 
         if (currentWater <= 0)
         {
-            GameOver();
+            StartWaterEmpty();
         }
     }
+    public void RecoverWater(int amount)
+    {
+        if (isGameOver)
+        {
+            return;
+        }
+
+        currentWater += amount;
+
+        currentWater = Mathf.Clamp(
+            currentWater,
+            0,
+            maxWater
+        );
+
+        Debug.Log(
+            "水回復！ 現在の水 : " +
+            currentWater +
+            " / " +
+            maxWater
+        );
+    }
+   
 }

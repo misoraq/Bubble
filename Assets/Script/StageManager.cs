@@ -7,8 +7,12 @@ public class StageManager : MonoBehaviour
     [SerializeField] private GameObject clearPanel;
     [SerializeField] private TMP_Text starText;
 
+    [Header("ƒXƒe[ƒW‚Ì“G")]
+    [SerializeField] private int totalEnemies = 0;
+
     [Header("“G‚ÌŒ‚”j”")]
     [SerializeField] private int defeatedEnemies = 0;
+    private int spawnedEnemies = 0;
 
     [Header("š•]‰¿")]
     [SerializeField] private int threeStarKills = 8;
@@ -31,12 +35,26 @@ public class StageManager : MonoBehaviour
 
     private void CheckStageClear()
     {
+        if (stageCleared)
+        {
+            return;
+        }
+
+        // ‚Ü‚¾—\’è”‚Ì“G‚ğo‚µ‚Ä‚¢‚È‚¢
+        if (spawnedEnemies < totalEnemies)
+        {
+            return;
+        }
+
+        // ‚Ü‚¾Enemy‚ªc‚Á‚Ä‚¢‚é
         Enemy[] enemies = FindObjectsOfType<Enemy>();
 
-        if (enemies.Length == 0 && !stageCleared)
+        if (enemies.Length > 0)
         {
-            StageClear();
+            return;
         }
+
+        StageClear();
     }
 
     private void StageClear()
@@ -82,4 +100,24 @@ public class StageManager : MonoBehaviour
 
         Debug.Log("“GŒ‚”j” : " + defeatedEnemies);
     }
+    public void AddSpawnedEnemy()
+    {
+        spawnedEnemies++;
+
+        Debug.Log(
+            "“GoŒ»” : " +
+            spawnedEnemies +
+            " / " +
+            totalEnemies
+        );
+    }
+    public void SetTotalEnemies(int amount)
+{
+    totalEnemies = amount;
+
+    Debug.Log(
+        "ƒXƒe[ƒW“G‘” : " +
+        totalEnemies
+    );
+}
 }
