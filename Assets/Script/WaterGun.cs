@@ -19,6 +19,9 @@ public class WaterGun : MonoBehaviour
     [Header("ゲームオーバー")]
     [SerializeField] private GameOverEffect gameOverEffect;
 
+    [Header("水切れ演出")]
+    [SerializeField] private DangerFlash dangerFlash;
+
     private bool isGameOver = false;
     private GameObject chargingBubble;
     private Bubble chargingBubbleScript;
@@ -155,29 +158,36 @@ public class WaterGun : MonoBehaviour
         isWaterEmpty = true;
         emptyTimer = emptyGameOverTime;
 
-        Debug.Log("水切れ！ 残り " + emptyTimer + " 秒");
+        if (dangerFlash != null)
+        {
+            dangerFlash.StartFlash(emptyGameOverTime);
+        }
     }
     private void UpdateWaterEmpty()
     {
-        // 回復したら水切れ状態解除
         if (currentWater > 0)
         {
             isWaterEmpty = false;
 
-            Debug.Log("水切れ状態から復帰！");
+            if (dangerFlash != null)
+            {
+                dangerFlash.StopFlash();
+            }
 
             return;
         }
 
         emptyTimer -= Time.deltaTime;
 
-        Debug.Log(
-            "GAME OVERまで : " +
-            Mathf.CeilToInt(emptyTimer)
-        );
-
         if (emptyTimer <= 0f)
         {
+            isWaterEmpty = false;
+
+            if (dangerFlash != null)
+            {
+                dangerFlash.StopFlash();
+            }
+
             GameOver();
         }
     }

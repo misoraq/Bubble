@@ -1,42 +1,46 @@
+
 using UnityEngine;
-using UnityEngine.UI;
 
 public class WaterGaugeUI : MonoBehaviour
 {
     [Header("水鉄砲")]
     [SerializeField] private WaterGun waterGun;
 
-    [Header("水のImage")]
-    [SerializeField] private Image waterImage;
+    [Header("水のSpriteRenderer")]
+    [SerializeField] private SpriteRenderer waterSprite;
 
     [Header("残量スプライト 1～10")]
     [SerializeField] private Sprite[] waterSprites;
 
     private void Update()
     {
-        if (waterGun == null || waterImage == null)
+        if (waterGun == null || waterSprite == null)
         {
             return;
         }
 
         int currentWater = waterGun.GetCurrentWater();
 
-        // 残量0なら水を非表示
+        // 残量0なら水だけ非表示
         if (currentWater <= 0)
         {
-            waterImage.enabled = false;
+            waterSprite.enabled = false;
             return;
         }
 
-        waterImage.enabled = true;
+        if (waterSprites == null || waterSprites.Length == 0)
+        {
+            return;
+        }
 
-        int spriteIndex =
-            Mathf.Clamp(
-                currentWater - 1,
-                0,
-                waterSprites.Length - 1
-            );
+        waterSprite.enabled = true;
 
-        waterImage.sprite = waterSprites[spriteIndex];
+        int spriteIndex = Mathf.Clamp(
+            currentWater - 1,
+            0,
+            waterSprites.Length - 1
+        );
+
+        waterSprite.sprite = waterSprites[spriteIndex];
     }
 }

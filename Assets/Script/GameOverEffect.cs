@@ -18,6 +18,13 @@ public class GameOverEffect : MonoBehaviour
     [SerializeField] private float shrinkDuration = 0.8f;
     [SerializeField] private float waitDuration = 0.5f;
 
+    [Header("ƒvƒŒƒCƒ„[üˆÍ‚Å’â~‚·‚éŠÔ")]
+    [SerializeField] private float circleHoldDuration = 1f;
+
+    [Header("Š®‘SˆÃ“]‚Ü‚Å‚ÌŠÔ")]
+    [SerializeField] private float finalDarkenDuration = 0.5f;
+    [Header("GAME OVER—‰º‰‰o")]
+    [SerializeField] private GameOverDropUI gameOverDropUI;
     [Header("Game Over UI")]
     [SerializeField] private GameOverUI gameOverUI;
 
@@ -182,12 +189,38 @@ public class GameOverEffect : MonoBehaviour
 
             yield return null;
         }
+        // ƒvƒŒƒCƒ„[‚ÌüˆÍ‚ğ‰f‚µ‚½ó‘Ô‚Å’â~
+        yield return new WaitForSecondsRealtime(circleHoldDuration);
 
+        // ‰~Œ`‚Ì‹ŠE‚ğŠ®‘S‚É•Â‚¶‚é
+        float closeTimer = 0f;
+
+        while (closeTimer < finalDarkenDuration)
+        {
+            closeTimer += Time.unscaledDeltaTime;
+
+            float t = Mathf.Clamp01(
+                closeTimer / Mathf.Max(finalDarkenDuration, 0.01f)
+            );
+
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            effectMaterial.SetFloat(
+                "_Radius",
+                Mathf.Lerp(endRadius, 0f, t)
+            );
+
+            yield return null;
+        }
+
+        // Š®‘S‚ÉˆÃ“]‚µ‚½ó‘Ô‚É‚·‚é
+        effectMaterial.SetFloat("_Radius", 0f);
+        effectMaterial.SetFloat("_Alpha", 1f);
         // -------------------------
         // ‡B ­‚µ’â~
         // -------------------------
 
-        
+
 
         // -------------------------
         // ‡C GAME OVER•\¦
@@ -198,11 +231,24 @@ public class GameOverEffect : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
+
+            // Panel“à‚ÌGameOverImage‚ğ•\¦
+            Transform imageTransform =
+                gameOverPanel.transform.Find("GameOverImage");
+
+            if (imageTransform != null)
+            {
+                imageTransform.gameObject.SetActive(true);
+            }
         }
 
-        if (gameOverUI != null)
+        if (gameOverDropUI != null)
+        {
+            gameOverDropUI.PlayDrop();
+        }
+        /*if (gameOverUI != null)
         {
             gameOverUI.PlayGameOver();
-        }
+        }*/
     }
 }
