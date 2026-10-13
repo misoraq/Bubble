@@ -57,6 +57,7 @@ public class StageManager : MonoBehaviour
         StageClear();
     }
 
+
     private void StageClear()
     {
         stageCleared = true;
@@ -69,23 +70,56 @@ public class StageManager : MonoBehaviour
             clearPanel.SetActive(true);
         }
 
-        // š•]‰¿
+        // Œ‚”j”‚©‚ç¯•]‰¿‚ğŒˆ’è
+        int stars = 1;
+
+        if (defeatedEnemies >= threeStarKills)
+        {
+            stars = 3;
+        }
+        else if (defeatedEnemies >= twoStarKills)
+        {
+            stars = 2;
+        }
+
+        // ƒNƒŠƒA‰æ–Ê‚É¯‚ğ•\¦
         if (starText != null)
         {
-            if (defeatedEnemies >= threeStarKills)
-            {
-                starText.text = "ššš";
-            }
-            else if (defeatedEnemies >= twoStarKills)
-            {
-                starText.text = "šš";
-            }
-            else
-            {
-                starText.text = "š";
-            }
+            starText.text = new string('š', stars);
+        }
+
+        // ¯•]‰¿‚ğ•Û‘¶‚µ‚ÄeƒXƒLƒ“‚ğ‰ğ•ú
+        if (GunSkinManager.Instance != null)
+        {
+            GunSkinManager.Instance.RegisterClearStars(stars);
+
+            Debug.Log(
+                "Å‚¯•]‰¿F" +
+                GunSkinManager.Instance.GetBestStars()
+            );
+
+            Debug.Log(
+                "ƒTƒe ‰ğ•úF" +
+                GunSkinManager.Instance.IsUnlocked(
+                    GunSkinManager.SharkGun
+                )
+            );
+
+            Debug.Log(
+                "‹|e ‰ğ•úF" +
+                GunSkinManager.Instance.IsUnlocked(
+                    GunSkinManager.BowGun
+                )
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "GunSkinManager‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ"
+            );
         }
     }
+
     public void RetryStage()
     {
         Time.timeScale = 1f;
