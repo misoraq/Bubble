@@ -17,7 +17,12 @@ public class GunSkinUI : MonoBehaviour
     [SerializeField] private Sprite normalGunSprite;
     [SerializeField] private Sprite sharkGunSprite;
     [SerializeField] private Sprite bowGunSprite;
+    [Header("装備ボタン")]
+    [SerializeField] private Button equipButton;
+    [SerializeField] private TMP_Text equipButtonText;
 
+    // 現在選択しているスキン
+    private int selectedSkinId = GunSkinManager.NormalGun;
     private void Start()
     {
         if (gunSkinPanel != null)
@@ -61,6 +66,7 @@ public class GunSkinUI : MonoBehaviour
 
     private void ShowSkin(int skinId)
     {
+        selectedSkinId = skinId;
         if (skinNameText == null ||
             skinImage == null ||
             unlockConditionText == null)
@@ -115,5 +121,48 @@ public class GunSkinUI : MonoBehaviour
         // 画像の縦横比を維持
         skinImage.preserveAspect = true;
         skinImage.enabled = skinImage.sprite != null;
+        UpdateEquipButton();
     }
+
+    private void UpdateEquipButton()
+    {
+        GunSkinManager manager = GunSkinManager.Instance;
+
+        if (manager == null || equipButton == null || equipButtonText == null)
+            return;
+
+        if (manager.GetEquippedSkin() == selectedSkinId)
+        {
+            equipButtonText.text = "装備中";
+            equipButton.interactable = false;
+        }
+        else if (manager.IsUnlocked(selectedSkinId))
+        {
+            equipButtonText.text = "装備する";
+            equipButton.interactable = true;
+        }
+        else
+        {
+            equipButtonText.text = "未解放";
+            equipButton.interactable = false;
+        }
+    }
+
+    public void EquipSelectedSkin()
+    {
+        GunSkinManager manager = GunSkinManager.Instance;
+
+        if (manager == null)
+            return;
+
+        // 選択中のスキンを装備・保存
+        manager.EquipSkin(selectedSkinId);
+
+        // 装備ボタンの表示を更新
+        ShowSkin(selectedSkinId);
+
+        Debug.Log("装備したスキンID: " + manager.GetEquippedSkin());
+    }
+
+
 }

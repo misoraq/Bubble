@@ -1,3 +1,6 @@
+
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemySpawner : MonoBehaviour
@@ -7,6 +10,7 @@ public class EnemySpawner : MonoBehaviour
 
     [Header("Wave設定")]
     [SerializeField] private int totalWaves = 5;
+    [SerializeField] private int enemiesPerWave = 3;
     [SerializeField] private float nextWaveDelay = 2f;
 
     [Header("出現位置")]
@@ -17,8 +21,8 @@ public class EnemySpawner : MonoBehaviour
     private int currentWave = 0;
     private bool waitingNextWave = false;
 
-    private Enemy enemy1;
-    private Enemy enemy2;
+    // 現在のWaveで出現した敵を管理
+    private List<Enemy> currentEnemies = new List<Enemy>();
 
     private void Start()
     {
@@ -27,12 +31,9 @@ public class EnemySpawner : MonoBehaviour
 
         if (stageManager != null)
         {
-            int totalEnemies =
-                totalWaves * 2;
+            int totalEnemies = totalWaves * enemiesPerWave;
 
-            stageManager.SetTotalEnemies(
-                totalEnemies
-            );
+            stageManager.SetTotalEnemies(totalEnemies);
         }
 
         SpawnEnemies();
@@ -47,74 +48,65 @@ public class EnemySpawner : MonoBehaviour
     {
         currentWave++;
 
-        Debug.Log(
-            "Wave " +
-            currentWave +
-            " / " +
-            totalWaves
-        );
+        Debug.Log("Wave " + currentWave + " / " + totalWaves);
 
-        enemy1 = SpawnRandomEnemy();
-        enemy2 = SpawnRandomEnemy();
+        currentEnemies.Clear();
 
         StageManager stageManager =
             FindObjectOfType<StageManager>();
 
-        if (stageManager != null)
+        for (int i = 0; i < enemiesPerWave; i++)
         {
-            stageManager.AddSpawnedEnemy();
-            stageManager.AddSpawnedEnemy();
+            Enemy enemy = SpawnRandomEnemy();
+
+            if (enemy != null)
+            {
+                currentEnemies.Add(enemy);
+
+                if (stageManager != null)
+                {
+                    stageManager.AddSpawnedEnemy();
+                }
+            }
         }
     }
 
     private Enemy SpawnRandomEnemy()
     {
-        if (Camera.main == null)
+        if (Camera.main == null || enemyPrefab == null)
         {
             return null;
         }
 
-        // 左右どちらから出るかランダム
-        bool spawnFromLeft =
-            Random.value < 0.5f;
+        // 左右どちらから出現するかランダム
+        bool spawnFromLeft = Random.value < 0.5f;
 
         float spawnX;
 
         if (spawnFromLeft)
         {
-            spawnX =
-                Camera.main.ViewportToWorldPoint(
-                    new Vector3(0f, 0.5f, 0f)
-                ).x - spawnOffsetX;
+            spawnX = Camera.main.ViewportToWorldPoint(
+                new Vector3(0f, 0.5f, 0f)
+            ).x - spawnOffsetX;
         }
         else
         {
-            spawnX =
-                Camera.main.ViewportToWorldPoint(
-                    new Vector3(1f, 0.5f, 0f)
-                ).x + spawnOffsetX;
+            spawnX = Camera.main.ViewportToWorldPoint(
+                new Vector3(1f, 0.5f, 0f)
+            ).x + spawnOffsetX;
         }
 
-        // 高さをランダム
-        float spawnY =
-            Random.Range(
-                minSpawnY,
-                maxSpawnY
-            );
+        // 高さをランダムに設定
+        float spawnY = Random.Range(minSpawnY, maxSpawnY);
 
         Vector3 spawnPosition =
-            new Vector3(
-                spawnX,
-                spawnY,
-                0f
-            );
+            new Vector3(spawnX, spawnY, 0f);
 
-        GameObject enemyObject =
-            Instantiate(
-                enemyPrefab,
-                spawnPosition,
-                Quaternion.identity
-            );
+        GameObject enemyObject = Instantiate(
+            enemyPrefab,
+            spawnPosition,
+            Quaternion.identity
+        );
 
         return enemyObject.GetComponent<Enemy>();
     }
@@ -122,34 +114,27 @@ public class EnemySpawner : MonoBehaviour
     private void CheckWaveEnd()
     {
         if (waitingNextWave)
-        {
             return;
+
+        // 現在のWaveの敵が1体でも残っていたら待機
+        foreach (Enemy enemy in currentEnemies)
+        {
+            if (enemy != null)
+                return;
         }
 
-        // 今のWaveの2体が残っている
-        if (enemy1 != null || enemy2 != null)
-        {
-            return;
-        }
-
-        // 全Wave終了
+        // 最終Waveなら次を出現させない
         if (currentWave >= totalWaves)
-        {
             return;
-        }
 
-        StartCoroutine(
-            NextWaveCoroutine()
-        );
+        StartCoroutine(NextWaveCoroutine());
     }
 
-    private System.Collections.IEnumerator NextWaveCoroutine()
+    private IEnumerator NextWaveCoroutine()
     {
         waitingNextWave = true;
 
-        yield return new WaitForSeconds(
-            nextWaveDelay
-        );
+        yield return new WaitForSeconds(nextWaveDelay);
 
         waitingNextWave = false;
 

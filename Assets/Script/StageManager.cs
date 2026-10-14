@@ -128,6 +128,15 @@ public class StageManager : MonoBehaviour
 
         SceneManager.LoadScene(currentScene.name);
     }
+    public void ReturnToTitle()
+    {
+        // 時間を通常に戻す
+        Time.timeScale = 1f;
+
+        // タイトルシーンへ移動
+        SceneManager.LoadScene("TitleScene");
+    }
+
     public void AddDefeatedEnemy()
     {
         defeatedEnemies++;

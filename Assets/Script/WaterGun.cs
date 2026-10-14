@@ -19,6 +19,9 @@ public class WaterGun : MonoBehaviour
     [Header("ƒQ[ƒ€ƒI[ƒo[")]
     [SerializeField] private GameOverEffect gameOverEffect;
 
+    [Header("–A‚ÆeŒû‚Ì‹——£’²®")]
+    [SerializeField] private float bubbleOffset = 0.15f;
+
     [Header("…Ø‚ê‰‰o")]
     [SerializeField] private DangerFlash dangerFlash;
 
@@ -77,18 +80,42 @@ public class WaterGun : MonoBehaviour
         }
     }
 
+
     private void ChargeBubble()
     {
         if (chargingBubbleScript != null)
         {
-            // ƒVƒƒƒ{ƒ“‹Ê‚ğeŒû‚É‚Â‚¢‚Ä‚±‚³‚¹‚é
-            chargingBubble.transform.position = muzzle.position;
-            chargingBubble.transform.rotation = muzzle.rotation;
-
-            // ƒVƒƒƒ{ƒ“‹Ê‚ğ–c‚ç‚Ü‚¹‚é
+            // –A‚ğ–c‚ç‚Ü‚¹‚é
             chargingBubbleScript.Charge();
+
+            // –A‚ÌŒ»İ‚Ì‘å‚«‚³‚ğæ“¾
+            SpriteRenderer bubbleRenderer =
+                chargingBubble.GetComponent<SpriteRenderer>();
+
+            if (bubbleRenderer != null)
+            {
+                // –A‚Ì”¼Œaiƒ[ƒ‹ƒhÀ•Wj
+                float bubbleRadius = bubbleRenderer.bounds.extents.x;
+
+                // eŒû‚©‚ç–A‚Ì”¼Œa•ª‚¾‚¯‘O‚ÉˆÚ“®
+                float direction =
+                    transform.eulerAngles.y == 180f ? 1f : -1f;
+
+                Vector3 offset =
+     Vector3.right * direction * (bubbleRadius - bubbleOffset);
+
+                chargingBubble.transform.position =
+                    muzzle.position + offset;
+            }
+            else
+            {
+                chargingBubble.transform.position = muzzle.position;
+            }
+
+            chargingBubble.transform.rotation = muzzle.rotation;
         }
     }
+
 
     private void Shoot()
     {
