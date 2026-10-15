@@ -12,6 +12,15 @@ public class GunSkinManager : MonoBehaviour
     private const string BestStarsKey = "BestClearStars";
     private const string EquippedSkinKey = "EquippedGunSkin";
 
+    [ContextMenu("テスト用：スキン解放リセット")]
+    private void ResetSkinUnlockTest()
+    {
+        PlayerPrefs.SetInt("BestClearStars", 0);
+        PlayerPrefs.SetInt("EquippedGunSkin", 0);
+        PlayerPrefs.Save();
+
+        Debug.Log("スキン解放データをリセットしました");
+    }
     private void Awake()
     {
         if (Instance != null && Instance != this)

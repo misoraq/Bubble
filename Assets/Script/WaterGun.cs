@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class WaterGun : MonoBehaviour
@@ -7,15 +8,19 @@ public class WaterGun : MonoBehaviour
 
     private float emptyTimer = 0f;
     private bool isWaterEmpty = false;
+
     [Header("水鉄砲")]
     [SerializeField] private Transform muzzle;
     [SerializeField] private GameObject bubblePrefab;
+
     [Header("水鉄砲の水")]
     [SerializeField] private int maxWater = 10;
     [SerializeField] private int currentWater = 10;
-    [Header("水消費")]
+
+    [Header("水消費量")]
     [SerializeField] private int normalWaterCost = 1;
     [SerializeField] private int fullChargeWaterCost = 2;
+
     [Header("ゲームオーバー")]
     [SerializeField] private GameOverEffect gameOverEffect;
 
@@ -25,9 +30,26 @@ public class WaterGun : MonoBehaviour
     [Header("水切れ演出")]
     [SerializeField] private DangerFlash dangerFlash;
 
+    [Header("射撃方向切り替え")]
+    [SerializeField] private Transform gunPivot;
+    [SerializeField] private float upwardAngle = -30f;
+
+    private bool isUpwardAim = false;
     private bool isGameOver = false;
+
+    [Header("クラゲの電撃による射撃停止")]
+    [SerializeField] private float electricDisableDuration = 3f;
+    private float electricDisableTimer = 0f;
+    private bool mustReleaseMouseAfterShock = false;
+
     private GameObject chargingBubble;
     private Bubble chargingBubbleScript;
+    private ElectricStunVisual electricStunVisual;
+    private void Start()
+    {
+        electricStunVisual = GetComponent<ElectricStunVisual>();
+        UpdateGunRotation();
+    }
 
     private void Update()
     {
@@ -35,32 +57,107 @@ public class WaterGun : MonoBehaviour
         {
             return;
         }
+
         if (isWaterEmpty)
         {
             UpdateWaterEmpty();
         }
-        // 左クリックを押した瞬間
+
+        if (electricDisableTimer > 0f)
+        {
+            electricDisableTimer = Mathf.Max(0f, electricDisableTimer - Time.deltaTime);
+
+            // 感電が終了した瞬間に銃の見た目を戻す
+            if (electricDisableTimer <= 0f && electricStunVisual != null)
+            {
+                electricStunVisual.EndStunVisual();
+            }
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            mustReleaseMouseAfterShock = false;
+        }
+
+        // 電撃中は射撃・チャージを禁止する（照準切り替えは可能）
+        if (electricDisableTimer > 0f || mustReleaseMouseAfterShock)
+        {
+            return;
+        }
+
+        // 右クリックで射撃方向を切り替える
+        if (Input.GetMouseButtonDown(1))
+        {
+            isUpwardAim = !isUpwardAim;
+            UpdateGunRotation();
+        }
+
+        // 左クリックでチャージ開始
         if (Input.GetMouseButtonDown(0))
         {
             StartCharging();
         }
 
-        // 左クリックを押している間
+        // 左クリック長押しでチャージ
         if (Input.GetMouseButton(0))
         {
             ChargeBubble();
         }
 
-        // 左クリックを離した瞬間
+        // 左クリックを離して発射
         if (Input.GetMouseButtonUp(0))
         {
             Shoot();
         }
     }
 
+    // 銃と手を一緒に回転
+    private void UpdateGunRotation()
+    {
+        if (gunPivot == null)
+        {
+            return;
+        }
+
+        float angle = isUpwardAim ? upwardAngle : 0f;
+
+        gunPivot.localRotation =
+            Quaternion.Euler(0f, 0f, angle);
+    }
+
+    // プレイヤーの向き
+    private float GetFacingDirection()
+    {
+        return Mathf.Abs(
+            Mathf.DeltaAngle(transform.eulerAngles.y, 180f)
+        ) < 1f ? 1f : -1f;
+    }
+
+    // 水平または斜め上の発射方向
+    private Vector2 GetShootDirection()
+    {
+        float direction = GetFacingDirection();
+
+        float angle = isUpwardAim
+            ? Mathf.Abs(upwardAngle)
+            : 0f;
+
+        float radians = angle * Mathf.Deg2Rad;
+
+        return new Vector2(
+            direction * Mathf.Cos(radians),
+            Mathf.Sin(radians)
+        ).normalized;
+    }
+
     private void StartCharging()
     {
-        // 水が足りなければ撃てない
+        if (chargingBubble != null)
+        {
+            return;
+        }
+
+        // 水が足りなければチャージしない
         if (currentWater < normalWaterCost)
         {
             return;
@@ -72,7 +169,8 @@ public class WaterGun : MonoBehaviour
             muzzle.rotation
         );
 
-        chargingBubbleScript = chargingBubble.GetComponent<Bubble>();
+        chargingBubbleScript =
+            chargingBubble.GetComponent<Bubble>();
 
         if (chargingBubbleScript != null)
         {
@@ -80,68 +178,72 @@ public class WaterGun : MonoBehaviour
         }
     }
 
-
     private void ChargeBubble()
     {
-        if (chargingBubbleScript != null)
-        {
-            // 泡を膨らませる
-            chargingBubbleScript.Charge();
-
-            // 泡の現在の大きさを取得
-            SpriteRenderer bubbleRenderer =
-                chargingBubble.GetComponent<SpriteRenderer>();
-
-            if (bubbleRenderer != null)
-            {
-                // 泡の半径（ワールド座標）
-                float bubbleRadius = bubbleRenderer.bounds.extents.x;
-
-                // 銃口から泡の半径分だけ前に移動
-                float direction =
-                    transform.eulerAngles.y == 180f ? 1f : -1f;
-
-                Vector3 offset =
-     Vector3.right * direction * (bubbleRadius - bubbleOffset);
-
-                chargingBubble.transform.position =
-                    muzzle.position + offset;
-            }
-            else
-            {
-                chargingBubble.transform.position = muzzle.position;
-            }
-
-            chargingBubble.transform.rotation = muzzle.rotation;
-        }
-    }
-
-
-    private void Shoot()
-    {
-        if (chargingBubble == null || chargingBubbleScript == null)
+        if (chargingBubbleScript == null ||
+            chargingBubble == null)
         {
             return;
         }
 
-        // Playerが右向きか左向きか確認
-        float direction;
+        // 泡を成長させる
+        chargingBubbleScript.Charge();
 
-        if (transform.eulerAngles.y == 180f)
+        // 現在の射撃方向を泡に設定
+        Vector2 shootDirection = GetShootDirection();
+        chargingBubbleScript.SetDirection(shootDirection);
+
+        SpriteRenderer bubbleRenderer =
+            chargingBubble.GetComponent<SpriteRenderer>();
+
+        if (bubbleRenderer != null)
         {
-            direction = 1f;
+            float bubbleRadius =
+                bubbleRenderer.bounds.extents.x;
+
+            // 水平射撃と斜め射撃で泡の距離を調整
+            float distance = bubbleRadius - bubbleOffset;
+
+            if (isUpwardAim)
+            {
+                // 斜め射撃では泡を銃口に近づける
+                distance -= 0.35f;
+            }
+
+            distance = Mathf.Max(0f, distance);
+
+            Vector3 offset =
+                (Vector3)shootDirection * distance;
+
+            chargingBubble.transform.position =
+                muzzle.position + offset;
         }
         else
         {
-            direction = -1f;
+            chargingBubble.transform.position =
+                muzzle.position;
         }
 
-        // シャボン玉を発射
-        chargingBubbleScript.SetDirection(direction);
+        chargingBubble.transform.rotation = muzzle.rotation;
+    }
 
-        // 発射状態にする
+    private void Shoot()
+    {
+        if (chargingBubble == null ||
+            chargingBubbleScript == null)
+        {
+            return;
+        }
+
+        // 発射方向を確定
+        Vector2 shootDirection = GetShootDirection();
+
+        chargingBubbleScript.SetDirection(shootDirection);
+
+        // 泡を発射
         chargingBubbleScript.Shoot();
 
+        // チャージ量に応じて水を消費
         int waterCost;
 
         if (chargingBubbleScript.IsFullCharge())
@@ -154,7 +256,6 @@ public class WaterGun : MonoBehaviour
         }
 
         currentWater -= waterCost;
-
         currentWater = Mathf.Max(currentWater, 0);
 
         if (currentWater <= 0)
@@ -162,10 +263,39 @@ public class WaterGun : MonoBehaviour
             StartWaterEmpty();
         }
 
-        // 参照をリセット
         chargingBubble = null;
         chargingBubbleScript = null;
     }
+
+    // クラゲの電撃を受けたときに呼び出す
+    public void DisableShootingByElectricity()
+    {
+        if (isGameOver) return;
+
+        electricDisableTimer = electricDisableDuration;
+
+        if (electricStunVisual != null)
+        {
+            electricStunVisual.StartStunVisual();
+        }
+        mustReleaseMouseAfterShock = true;
+
+        // チャージ中の泡は水を消費せずキャンセル
+        if (chargingBubble != null)
+        {
+            Destroy(chargingBubble);
+            chargingBubble = null;
+            chargingBubbleScript = null;
+        }
+
+        Debug.Log("感電！水鉄砲を" + electricDisableDuration + "秒間使用できません");
+    }
+
+    public bool IsShootingDisabledByElectricity()
+    {
+        return electricDisableTimer > 0f;
+    }
+
     public int GetCurrentWater()
     {
         return currentWater;
@@ -175,6 +305,7 @@ public class WaterGun : MonoBehaviour
     {
         return maxWater;
     }
+
     private void StartWaterEmpty()
     {
         if (isWaterEmpty)
@@ -190,6 +321,7 @@ public class WaterGun : MonoBehaviour
             dangerFlash.StartFlash(emptyGameOverTime);
         }
     }
+
     private void UpdateWaterEmpty()
     {
         if (currentWater > 0)
@@ -218,6 +350,7 @@ public class WaterGun : MonoBehaviour
             GameOver();
         }
     }
+
     private void GameOver()
     {
         if (isGameOver)
@@ -229,7 +362,7 @@ public class WaterGun : MonoBehaviour
 
         Debug.Log("水残量0！ GAME OVER");
 
-        // 全ての敵を停止
+        // すべての敵を停止
         Enemy[] enemies = FindObjectsOfType<Enemy>();
 
         foreach (Enemy enemy in enemies)
@@ -237,12 +370,13 @@ public class WaterGun : MonoBehaviour
             enemy.StopForGameOver();
         }
 
-        // GameOver演出
+        // ゲームオーバー演出
         if (gameOverEffect != null)
         {
             gameOverEffect.StartGameOver();
         }
     }
+
     public void TakeDamage(int damage)
     {
         if (isGameOver)
@@ -260,6 +394,7 @@ public class WaterGun : MonoBehaviour
             StartWaterEmpty();
         }
     }
+
     public void RecoverWater(int amount)
     {
         if (isGameOver)
@@ -282,5 +417,4 @@ public class WaterGun : MonoBehaviour
             maxWater
         );
     }
-   
 }

@@ -13,7 +13,7 @@ public class Bubble : MonoBehaviour
 
     private float previousChargeOffset = 0f;
 
-    private float moveDirection;
+    private Vector2 moveDirection;
 
     private bool isCharging = false;
     private bool isShot = false;
@@ -89,16 +89,15 @@ public class Bubble : MonoBehaviour
             previousChargeOffset;
 
         transform.position +=
-            Vector3.right *
-            moveDirection *
-            offsetDelta;
+      (Vector3)moveDirection *
+      offsetDelta;
 
         previousChargeOffset = chargeOffset;
     }
 
-    public void SetDirection(float direction)
+    public void SetDirection(Vector2 direction)
     {
-        moveDirection = direction;
+        moveDirection = direction.normalized;
     }
 
     public void Shoot()
@@ -121,26 +120,62 @@ public class Bubble : MonoBehaviour
         }
 
         transform.position +=
-            Vector3.right *
-            moveDirection *
-            moveSpeed *
-            Time.deltaTime;
+      (Vector3)moveDirection *
+      moveSpeed *
+      Time.deltaTime;
     }
+
+
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Enemy enemy = other.GetComponent<Enemy>();
+        // ìGÇÃçUåÇópÇÃñAÇ…ìñÇΩÇ¡ÇΩèÍçáÇÕÅA
+        // ìGñ{ëÃÇ÷ÇÃñΩíÜÇ∆ÇµÇƒàµÇÌÇ»Ç¢
+        EnemyBubble enemyBubble =
+            other.GetComponentInParent<EnemyBubble>();
+
+        if (enemyBubble != null)
+        {
+            return;
+        }
+
+        bool isFullCharge = IsFullCharge();
+
+        Enemy enemy = other.GetComponentInParent<Enemy>();
+
+        JellyfishBubbleHit jellyfish =
+            other.GetComponentInParent<JellyfishBubbleHit>();
+
+        Transform hitTarget = null;
 
         if (enemy != null)
         {
-            bool isFullCharge =
-                transform.localScale.x >= maxScale * 0.99f;
-
             enemy.HitByBubble(isFullCharge);
-
-            Destroy(gameObject);
+            hitTarget = enemy.transform;
         }
+        else if (jellyfish != null)
+        {
+            jellyfish.HitByBubble(isFullCharge);
+            hitTarget = jellyfish.transform;
+        }
+
+        if (hitTarget == null)
+        {
+            return;
+        }
+
+        HitTextEffect hitTextEffect =
+            FindObjectOfType<HitTextEffect>();
+
+        if (hitTextEffect != null)
+        {
+            hitTextEffect.ShowHit(hitTarget);
+        }
+
+        Destroy(gameObject);
     }
+
+
     public bool IsFullCharge()
     {
         return transform.localScale.x >= maxScale * 0.99f;

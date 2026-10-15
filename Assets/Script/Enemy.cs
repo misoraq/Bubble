@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
@@ -20,6 +21,10 @@ public class Enemy : MonoBehaviour
     [Header("ダッシュUI")]
     [SerializeField] private GameObject dashUI;
     private int currentHits = 0;
+
+    [Header("通常弾による停止")]
+    [SerializeField] private float stunDuration = 2f;
+    private float stunTimer = 0f;
     private bool isBubbled = false;
     [Header("ダッシュ衝突")]
     [SerializeField] private float dashKnockbackSpeed = 4f;
@@ -37,7 +42,7 @@ public class Enemy : MonoBehaviour
     private float originalScaleZ;
 
     [Header("向き制御")]
-    [SerializeField] private float turnThreshold = 0.3f;
+    [SerializeField] private float turnThreshold = 0.8f;
     [SerializeField] private float turnCooldown = 0.2f;
 
     private float turnTimer = 0f;
@@ -50,6 +55,15 @@ public class Enemy : MonoBehaviour
     [Header("敵攻撃泡の位置")]
     [SerializeField] private float attackBubbleOffsetX = 0.15f;
 
+    [Header("攻撃時の敵の向き")]
+    [SerializeField] private Transform enemyVisual;
+    [SerializeField] private float maxAimAngle = 45f;
+    [SerializeField] private float aimRotateSpeed = 10f;
+
+    [Header("攻撃予告")]
+    [SerializeField] private EnemyAimLine aimLine;
+    [SerializeField] private float aimWarningTime = 0.8f;
+    private Coroutine aimCoroutine;
 
     private float attackTimer = 0f;
 
@@ -86,6 +100,23 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        // 通常弾を受けている間は移動と攻撃を停止する
+        if (stunTimer > 0f && !isBubbled)
+        {
+            stunTimer -= Time.deltaTime;
+
+            if (rb != null)
+                rb.velocity = Vector2.zero;
+
+            if (stunTimer <= 0f)
+            {
+                stunTimer = 0f;
+                attackTimer = attackCooldown;
+            }
+
+            return;
+        }
+
         if (player != null && !isBubbled && !isAttacking)
         {
             ChasePlayer();
@@ -93,52 +124,41 @@ public class Enemy : MonoBehaviour
         // =========================
         // 敵の向き
         // =========================
-        if (player != null)
+
+        if (player != null && !isBubbled)
         {
             turnTimer -= Time.deltaTime;
 
+            // プレイヤーとの横方向の距離
             float distanceX =
                 player.position.x - transform.position.x;
 
-            // 一定以上X方向に離れている場合だけ向きを変更
+            // 真上・真下付近では最後の向きを維持する
             if (Mathf.Abs(distanceX) > turnThreshold)
             {
-                // 左右を判定
                 bool playerIsLeft = distanceX < 0f;
 
                 bool enemyIsFacingLeft =
                     transform.localScale.x > 0f;
 
-                // 向きを変える必要があるか
                 bool needTurn =
                     playerIsLeft != enemyIsFacingLeft;
 
-                // 少し時間を空けてから反転
                 if (needTurn && turnTimer <= 0f)
                 {
-                    if (playerIsLeft)
-                    {
-                        // 左
-                        transform.localScale = new Vector3(
-                            Mathf.Abs(transform.localScale.x),
-                            transform.localScale.y,
-                            transform.localScale.z
-                        );
-                    }
-                    else
-                    {
-                        // 右
-                        transform.localScale = new Vector3(
-                            -Mathf.Abs(transform.localScale.x),
-                            transform.localScale.y,
-                            transform.localScale.z
-                        );
-                    }
+                    float scaleX = Mathf.Abs(transform.localScale.x);
+
+                    transform.localScale = new Vector3(
+                        playerIsLeft ? scaleX : -scaleX,
+                        transform.localScale.y,
+                        transform.localScale.z
+                    );
 
                     turnTimer = turnCooldown;
                 }
             }
         }
+
         if (player != null && !isBubbled)
         {
             attackTimer -= Time.deltaTime;
@@ -185,39 +205,43 @@ public class Enemy : MonoBehaviour
 
     public void HitByBubble(bool isFullCharge)
     {
-        if (isBubbled)
-        {
+        if (isBubbled || isGameOverStopped || isSpawning)
             return;
-        }
 
-        // フルチャージなら1発で包む
         if (isFullCharge)
         {
-            GetBubbled(
-                fullChargeBubbleScale,
-                fullChargeBubbleTime
-            );
-
+            stunTimer = 0f;
+            CancelChargingAttack();
+            GetBubbled(fullChargeBubbleScale, fullChargeBubbleTime);
             return;
         }
 
-        // 小さい泡は複数回必要
-        currentHits++;
+        // 通常弾：停止時間を更新する（何発当てても捕獲しない）
+        stunTimer = stunDuration;
 
-        Debug.Log(
-            "敵に泡が当たった: " +
-            currentHits +
-            " / " +
-            requiredHits
-        );
+        if (rb != null)
+            rb.velocity = Vector2.zero;
 
-        if (currentHits >= requiredHits)
+        CancelChargingAttack();
+    }
+
+    // チャージ中の攻撃泡を消し、膨らんだ体を元に戻す
+    private void CancelChargingAttack()
+    {
+        CancelAim();
+
+        // チャージ中の泡は敵の子オブジェクトになっている。
+        // 発射済みの泡は親から外れているため削除しない。
+        EnemyBubble[] chargingBubbles = GetComponentsInChildren<EnemyBubble>();
+        foreach (EnemyBubble bubble in chargingBubbles)
         {
-            GetBubbled(
-                smallBubbleScale,
-                smallBubbleTime
-            );
+            if (bubble != null)
+                Destroy(bubble.gameObject);
         }
+
+        ResetInflateSmooth(0.15f);
+        EndAttack();
+        attackTimer = attackCooldown;
     }
 
     private void GetBubbled(
@@ -226,6 +250,7 @@ public class Enemy : MonoBehaviour
   )
     {
         isBubbled = true;
+        CancelAim();
 
         attackTimer = attackCooldown;
         bubbleTimer = bubbleTime;
@@ -272,6 +297,12 @@ public class Enemy : MonoBehaviour
     public bool IsBubbled
     {
         get { return isBubbled; }
+    }
+
+    // EnemyBubbleから通常弾の停止状態を参照する
+    public bool IsStunned
+    {
+        get { return stunTimer > 0f; }
     }
     public void ShowDashUI(bool show)
     {
@@ -354,9 +385,14 @@ public class Enemy : MonoBehaviour
         );
     }
 
+    private Coroutine resetInflateCoroutine;
+
     public void ResetInflateSmooth(float duration)
     {
-        StartCoroutine(ResetInflateCoroutine(duration));
+        if (resetInflateCoroutine != null)
+            StopCoroutine(resetInflateCoroutine);
+
+        resetInflateCoroutine = StartCoroutine(ResetInflateCoroutine(duration));
     }
 
     private System.Collections.IEnumerator ResetInflateCoroutine(float duration)
@@ -395,58 +431,114 @@ public class Enemy : MonoBehaviour
     }
     private void ShootEnemyBubble()
     {
-        if (enemyBubblePrefab == null || attackMuzzle == null)
+        if (enemyBubblePrefab == null || attackMuzzle == null || player == null)
             return;
 
         isAttacking = true;
-
         float directionX = Mathf.Sign(transform.localScale.x);
-
-        Vector3 bubblePosition =
-            attackMuzzle.position +
+        Vector3 bubblePosition = attackMuzzle.position +
             new Vector3(directionX * attackBubbleOffsetX, 0f, 0f);
 
         GameObject bubbleObject = Instantiate(
-            enemyBubblePrefab,
-            bubblePosition,
-            Quaternion.identity,
-            attackMuzzle
-        );
+            enemyBubblePrefab, bubblePosition, Quaternion.identity, attackMuzzle);
 
-        EnemyBubble enemyBubble =
-            bubbleObject.GetComponentInChildren<EnemyBubble>();
-
+        EnemyBubble enemyBubble = bubbleObject.GetComponentInChildren<EnemyBubble>();
         if (enemyBubble == null)
         {
             Debug.LogError("EnemyBubble.csがPrefabに見つかりません！");
+            Destroy(bubbleObject);
+            isAttacking = false;
             return;
         }
 
         enemyBubble.SetOwner(this);
-
-        if (player != null)
-        {
-            enemyBubble.SetDirection(
-                Mathf.Sign(
-                    player.position.x -
-                    transform.position.x
-                )
-            );
-        }
+        if (aimCoroutine != null) StopCoroutine(aimCoroutine);
+        aimCoroutine = StartCoroutine(AimBeforeShot(enemyBubble));
     }
+
+    private IEnumerator AimBeforeShot(EnemyBubble bubble)
+    {
+        float timer = 0f;
+        Vector2 direction = Vector2.right;
+        while (timer < aimWarningTime)
+        {
+            if (bubble == null || player == null || isBubbled ||
+                isGameOverStopped || isSpawning)
+            {
+                if (aimLine != null) aimLine.Hide();
+                aimCoroutine = null;
+                yield break;
+            }
+
+            Vector2 start = attackMuzzle.position;
+            Vector2 target = player.position;
+            direction = (target - start).normalized;
+            RotateEnemyToAim(direction);
+            if (direction.sqrMagnitude < 0.001f)
+                direction = transform.localScale.x > 0f ? Vector2.left : Vector2.right;
+
+            bubble.SetDirection(direction);
+            if (aimLine != null) aimLine.Show(start, target);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        // この時点の方向を固定。EnemyBubbleは最大チャージ時に自動発射する。
+        if (aimLine != null) aimLine.Hide();
+        aimCoroutine = null;
+    }
+
+    private void CancelAim()
+    {
+        if (aimCoroutine != null)
+        {
+            StopCoroutine(aimCoroutine);
+            aimCoroutine = null;
+        }
+        if (aimLine != null) aimLine.Hide();
+    }
+
+
     private void ChasePlayer()
     {
-        float direction =
-            Mathf.Sign(player.position.x - transform.position.x);
+        if (player == null || rb == null)
+        {
+            return;
+        }
+
+        // プレイヤーとの横方向の距離
+        float distanceX =
+            player.position.x - transform.position.x;
+
+        // プレイヤーが真上・真下付近にいる場合
+        if (Mathf.Abs(distanceX) <= turnThreshold)
+        {
+            // 左右移動を停止
+            rb.velocity = new Vector2(
+                0f,
+                rb.velocity.y
+            );
+
+            return;
+        }
+
+        // プレイヤーが左右に離れている場合だけ追跡
+        float direction = Mathf.Sign(distanceX);
 
         rb.velocity = new Vector2(
             direction * chaseSpeed,
             rb.velocity.y
         );
     }
+
     public void EndAttack()
     {
         isAttacking = false;
+
+        if (enemyVisual != null)
+        {
+            enemyVisual.localRotation = Quaternion.identity;
+        }
     }
     public void StopForGameOver()
     {
@@ -456,6 +548,7 @@ public class Enemy : MonoBehaviour
         }
 
         isGameOverStopped = true;
+        CancelAim();
 
         // 移動を完全に停止
         if (rb != null)
@@ -487,6 +580,7 @@ public class Enemy : MonoBehaviour
     public void StartSpawnSequence()
     {
         isSpawning = true;
+        CancelAim();
 
         if (rb != null)
         {
@@ -501,5 +595,31 @@ public class Enemy : MonoBehaviour
 
         // 出現直後に即攻撃しないようにする
         attackTimer = attackCooldown;
+    }
+    private void RotateEnemyToAim(Vector2 direction)
+    {
+        if (enemyVisual == null) return;
+
+        // 左右反転を考慮して、上下の傾きを計算
+        float angle = Mathf.Atan2(
+            direction.y,
+            Mathf.Abs(direction.x)
+        ) * Mathf.Rad2Deg;
+
+        angle = Mathf.Clamp(angle, -maxAimAngle, maxAimAngle);
+
+        // 左右反転に応じて回転方向を調整
+        float facingSign = Mathf.Sign(transform.localScale.x);
+
+        float targetAngle = -angle * facingSign;
+
+        Quaternion targetRotation =
+            Quaternion.Euler(0f, 0f, targetAngle);
+
+        enemyVisual.localRotation = Quaternion.Lerp(
+            enemyVisual.localRotation,
+            targetRotation,
+            aimRotateSpeed * Time.deltaTime
+        );
     }
 }

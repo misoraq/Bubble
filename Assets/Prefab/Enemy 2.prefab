@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 974073249473247341}
   - component: {fileID: 4238090382402656649}
   - component: {fileID: 3522500922608773836}
+  - component: {fileID: -8930192156977532675}
   m_Layer: 3
   m_Name: Enemy 2
   m_TagString: Untagged
@@ -142,7 +143,7 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -195,6 +196,7 @@ MonoBehaviour:
   floatSpeed: 1.5
   requiredHits: 3
   dashUI: {fileID: 0}
+  stunDuration: 2
   dashKnockbackSpeed: 1
   dashKnockbackTime: 0.2
   chaseSpeed: 2
@@ -206,8 +208,30 @@ MonoBehaviour:
   attackMuzzle: {fileID: 346281319402130280}
   attackCooldown: 3
   attackBubbleOffsetX: 0.15
+  enemyVisual: {fileID: 6489561138065735838}
+  maxAimAngle: 30
+  aimRotateSpeed: 1
+  aimLine: {fileID: -8930192156977532675}
+  aimWarningTime: 0.8
   defeatHeightOffset: 0.3
   waterRecoveryAmount: 2
+--- !u!114 &-8930192156977532675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5318474180066397397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f40359caef97e1a4a84490cf26137384, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dotCount: 10
+  dotSpacing: 0.2
+  dotSize: 0.15
+  dotColor: {r: 0, g: 0, b: 0, a: 1}
+  sortingOrder: 100
 --- !u!1 &9115026133233920732
 GameObject:
   m_ObjectHideFlags: 0
