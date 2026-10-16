@@ -127,24 +127,39 @@ public class Bubble : MonoBehaviour
 
 
 
+
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // “G‚ÌUŒ‚—p‚Ì–A‚É“–‚½‚Á‚½ê‡‚ÍA
-        // “G–{‘Ì‚Ö‚Ì–½’†‚Æ‚µ‚Äˆµ‚í‚È‚¢
+        // “G‚ªƒ`ƒƒ[ƒW‚µ‚Ä‚¢‚éUŒ‚—p‚Ì–A‚Í–³‹
         EnemyBubble enemyBubble =
             other.GetComponentInParent<EnemyBubble>();
 
-        if (enemyBubble != null)
+        BubbleFinish bubbleFinish =
+            other.GetComponentInParent<BubbleFinish>();
+
+        if (bubbleFinish != null && bubbleFinish.IsCaptured())
         {
+            // •ßŠlÏ‚İ‚Ì“G‚É‚Í’Êí’eEƒtƒ‹ƒ`ƒƒ[ƒW’e‚ğ
+            // ‹æ•Ê‚¹‚¸A’Ç‰Áƒqƒbƒg‚Æ‚µ‚Ä”‚¦‚é
+            bubbleFinish.AddHit();
+
+            Destroy(gameObject);
             return;
         }
 
+        if (enemyBubble != null)
+            return;
+
         bool isFullCharge = IsFullCharge();
 
-        Enemy enemy = other.GetComponentInParent<Enemy>();
+        Enemy enemy =
+            other.GetComponentInParent<Enemy>();
 
         JellyfishBubbleHit jellyfish =
             other.GetComponentInParent<JellyfishBubbleHit>();
+
+        CrabBubbleHit crab =
+            other.GetComponentInParent<CrabBubbleHit>();
 
         Transform hitTarget = null;
 
@@ -158,22 +173,24 @@ public class Bubble : MonoBehaviour
             jellyfish.HitByBubble(isFullCharge);
             hitTarget = jellyfish.transform;
         }
+        else if (crab != null)
+        {
+            crab.HitByBubble(isFullCharge);
+            hitTarget = crab.transform;
+        }
 
         if (hitTarget == null)
-        {
             return;
-        }
 
         HitTextEffect hitTextEffect =
             FindObjectOfType<HitTextEffect>();
 
         if (hitTextEffect != null)
-        {
             hitTextEffect.ShowHit(hitTarget);
-        }
 
         Destroy(gameObject);
     }
+
 
 
     public bool IsFullCharge()

@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class WaterGun : MonoBehaviour
 {
+    private PlayerMove playerMove;
     [Header("水切れ")]
     [SerializeField] private float emptyGameOverTime = 3f;
 
@@ -47,6 +48,7 @@ public class WaterGun : MonoBehaviour
     private ElectricStunVisual electricStunVisual;
     private void Start()
     {
+        playerMove = GetComponentInParent<PlayerMove>();
         electricStunVisual = GetComponent<ElectricStunVisual>();
         UpdateGunRotation();
     }
@@ -84,7 +86,10 @@ public class WaterGun : MonoBehaviour
         {
             return;
         }
-
+        if (playerMove != null && playerMove.IsCrabStunned)
+        {
+            return;
+        }
         // 右クリックで射撃方向を切り替える
         if (Input.GetMouseButtonDown(1))
         {
@@ -417,4 +422,20 @@ public class WaterGun : MonoBehaviour
             maxWater
         );
     }
+
+    public void CancelChargingByCrab()
+    {
+        // 突進を受けた瞬間、チャージ中の泡を消す
+        if (chargingBubble != null)
+        {
+            Destroy(chargingBubble);
+            chargingBubble = null;
+            chargingBubbleScript = null;
+        }
+
+        // 行動不能が解除されるまで、
+        // マウスを押しっぱなしにしても再チャージさせない
+        mustReleaseMouseAfterShock = true;
+    }
+
 }

@@ -1,6 +1,8 @@
+
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
+
 public class StageManager : MonoBehaviour
 {
     [Header("クリアUI")]
@@ -12,20 +14,30 @@ public class StageManager : MonoBehaviour
 
     [Header("敵の撃破数")]
     [SerializeField] private int defeatedEnemies = 0;
+
     private int spawnedEnemies = 0;
 
-    [Header("★評価")]
+    [Header("星評価")]
     [SerializeField] private int threeStarKills = 8;
     [SerializeField] private int twoStarKills = 5;
 
     private bool stageCleared = false;
-
+    private EnemySpawner enemySpawner;
+    [Header("敵の種類別撃破数")]
+    [SerializeField] private int pufferfishKills = 0;
+    [SerializeField] private int jellyfishKills = 0;
+    [SerializeField] private int crabKills = 0;
+    [Header("敵別撃破数のUI")]
+    [SerializeField] private TMP_Text pufferfishCountText;
+    [SerializeField] private TMP_Text jellyfishCountText;
+    [SerializeField] private TMP_Text crabCountText;
     private void Start()
     {
+        enemySpawner =
+            FindObjectOfType<EnemySpawner>();
+
         if (clearPanel != null)
-        {
             clearPanel.SetActive(false);
-        }
     }
 
     private void Update()
@@ -36,27 +48,33 @@ public class StageManager : MonoBehaviour
     private void CheckStageClear()
     {
         if (stageCleared)
-        {
             return;
-        }
 
-        // まだ予定数の敵を出していない
+        if (enemySpawner == null)
+            return;
+
+        // 全Waveのスポーンと撃破が終わるまで待つ
+        if (!enemySpawner.IsAllWavesCompleted)
+            return;
+
+        // 予定した敵が全員スポーンしたか
         if (spawnedEnemies < totalEnemies)
-        {
             return;
-        }
 
-        // まだEnemyが残っている
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
-
-        if (enemies.Length > 0)
-        {
+        // ハリセンボン
+        if (FindObjectsOfType<Enemy>().Length > 0)
             return;
-        }
+
+        // クラゲ
+        if (FindObjectsOfType<JellyfishBubbleHit>().Length > 0)
+            return;
+
+        // カニ
+        if (FindObjectsOfType<CrabBubbleHit>().Length > 0)
+            return;
 
         StageClear();
     }
-
 
     private void StageClear()
     {
@@ -65,12 +83,13 @@ public class StageManager : MonoBehaviour
         Debug.Log("ステージクリア！");
         Debug.Log("最終撃破数 : " + defeatedEnemies);
 
-        if (clearPanel != null)
-        {
-            clearPanel.SetActive(true);
-        }
+        // 敵ごとの撃破数を表示
+        UpdateResultUI();
 
-        // 撃破数から星評価を決定
+        // リザルト画面を表示
+        if (clearPanel != null)
+            clearPanel.SetActive(true);
+
         int stars = 1;
 
         if (defeatedEnemies >= threeStarKills)
@@ -82,13 +101,9 @@ public class StageManager : MonoBehaviour
             stars = 2;
         }
 
-        // クリア画面に星を表示
         if (starText != null)
-        {
             starText.text = new string('★', stars);
-        }
 
-        // 星評価を保存して銃スキンを解放
         if (GunSkinManager.Instance != null)
         {
             GunSkinManager.Instance.RegisterClearStars(stars);
@@ -124,43 +139,86 @@ public class StageManager : MonoBehaviour
     {
         Time.timeScale = 1f;
 
-        Scene currentScene = SceneManager.GetActiveScene();
+        Scene currentScene =
+            SceneManager.GetActiveScene();
 
         SceneManager.LoadScene(currentScene.name);
     }
+
     public void ReturnToTitle()
     {
-        // 時間を通常に戻す
         Time.timeScale = 1f;
-
-        // タイトルシーンへ移動
         SceneManager.LoadScene("TitleScene");
     }
 
     public void AddDefeatedEnemy()
     {
         defeatedEnemies++;
-
         Debug.Log("敵撃破数 : " + defeatedEnemies);
     }
+
+    public void AddDefeatedEnemy(string enemyType)
+    {
+        // 既存の総撃破数を更新
+        AddDefeatedEnemy();
+
+        switch (enemyType)
+        {
+            case "Pufferfish":
+                pufferfishKills++;
+                break;
+
+            case "Jellyfish":
+                jellyfishKills++;
+                break;
+
+            case "Crab":
+                crabKills++;
+                break;
+        }
+
+        Debug.Log(
+            "ハリセンボン：" + pufferfishKills +
+            " / クラゲ：" + jellyfishKills +
+            " / カニ：" + crabKills
+        );
+    }
+
     public void AddSpawnedEnemy()
     {
         spawnedEnemies++;
 
         Debug.Log(
             "敵出現数 : " +
-            spawnedEnemies +
-            " / " +
-            totalEnemies
+            spawnedEnemies + " / " + totalEnemies
         );
     }
-    public void SetTotalEnemies(int amount)
-{
-    totalEnemies = amount;
 
-    Debug.Log(
-        "ステージ敵総数 : " +
-        totalEnemies
-    );
-}
+    public void SetTotalEnemies(int amount)
+    {
+        totalEnemies = amount;
+        spawnedEnemies = 0;
+        defeatedEnemies = 0;
+        pufferfishKills = 0;
+        jellyfishKills = 0;
+        crabKills = 0;
+        stageCleared = false;
+
+        Debug.Log(
+            "ステージ敵総数 : " + totalEnemies
+        );
+    }
+
+    private void UpdateResultUI()
+    {
+        if (pufferfishCountText != null)
+            pufferfishCountText.text = "× " + pufferfishKills;
+
+        if (jellyfishCountText != null)
+            jellyfishCountText.text = "× " + jellyfishKills;
+
+        if (crabCountText != null)
+            crabCountText.text = "× " + crabKills;
+    }
+
 }

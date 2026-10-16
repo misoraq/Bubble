@@ -21,6 +21,18 @@ public class PlayerMove : MonoBehaviour
     [SerializeField] private float dashDuration = 0.25f;
     [SerializeField] private float dashRange = 3f;
 
+
+    [Header("カニの突進による行動不能")]
+    [SerializeField] private float crabStunDuration = 1.2f;
+    [SerializeField] private float crabKnockbackSpeed = 4f;
+    [SerializeField] private float crabKnockbackTime = 0.15f;
+
+    private float crabStunTimer;
+    private float crabKnockbackTimer;
+    private Vector2 crabKnockbackDirection;
+
+    public bool IsCrabStunned => crabStunTimer > 0f;
+
     [Header("画面端")]
     [SerializeField] private float screenMargin = 0.5f;
 
@@ -41,8 +53,27 @@ public class PlayerMove : MonoBehaviour
         normalGravityScale = rb.gravityScale;
     }
 
+
     private void Update()
     {
+        if (crabStunTimer > 0f)
+        {
+            crabStunTimer -= Time.deltaTime;
+
+            if (crabKnockbackTimer > 0f)
+                crabKnockbackTimer -= Time.deltaTime;
+
+            if (jetFlame != null)
+                jetFlame.SetActive(false);
+
+            if (animator != null)
+                animator.SetBool("IsWalking", false);
+
+            LimitToScreen();
+            UpdateDashUI();
+            return;
+        }
+
         Move();
         Jump();
         Dash();
@@ -51,8 +82,27 @@ public class PlayerMove : MonoBehaviour
         UpdateDashUI();
     }
 
+
+
     private void FixedUpdate()
     {
+        if (IsCrabStunned)
+        {
+            if (crabKnockbackTimer > 0f)
+            {
+                rb.velocity = new Vector2(
+                    crabKnockbackDirection.x * crabKnockbackSpeed,
+                    rb.velocity.y
+                );
+            }
+            else
+            {
+                rb.velocity = new Vector2(0f, rb.velocity.y);
+            }
+
+            return;
+        }
+
         if (isDashing)
         {
             rb.velocity = dashDirection * dashSpeed;
@@ -400,4 +450,32 @@ public class PlayerMove : MonoBehaviour
             }
         }
     }
+
+    public void HitByCrabCharge(Vector2 direction)
+    {
+        crabStunTimer = crabStunDuration;
+        crabKnockbackTimer = crabKnockbackTime;
+        crabKnockbackDirection =
+            direction.x >= 0f ? Vector2.right : Vector2.left;
+
+        // ダッシュを中断
+        if (isDashing)
+            EndDash();
+
+        bounceTimer = 0f;
+
+        rb.velocity = new Vector2(
+            crabKnockbackDirection.x * crabKnockbackSpeed,
+            rb.velocity.y
+        );
+
+        WaterGun waterGun = GetComponentInChildren<WaterGun>();
+
+        if (waterGun != null)
+        {
+            waterGun.CancelChargingByCrab();
+        }
+
+    }
+
 }

@@ -278,6 +278,7 @@ public class Enemy : MonoBehaviour
     private void ReleaseBubble()
     {
 
+
         isBubbled = false;
 
         if (bubbleVisual != null)
@@ -289,7 +290,13 @@ public class Enemy : MonoBehaviour
         {
             dashUI.SetActive(false);
         }
+        EnemyBubblePop pop =
+    GetComponent<EnemyBubblePop>();
 
+        if (pop != null)
+        {
+            pop.PlayPop();
+        }
         currentHits = 0;
 
         Debug.Log("–A‚ÌŠÔØ‚êI“G‚ªŒ³‚É–ß‚Á‚½I");
@@ -324,14 +331,19 @@ public class Enemy : MonoBehaviour
         }
 
         Debug.Log("“G‚ğŒ‚”jI");
+        EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
 
+        if (pop != null)
+        {
+            pop.PlayPop();
+        }
         // Œ‚”j”‚ğ‘‚â‚·
         StageManager stageManager =
             FindObjectOfType<StageManager>();
 
         if (stageManager != null)
         {
-            stageManager.AddDefeatedEnemy();
+            stageManager.AddDefeatedEnemy("Pufferfish");
         }
 
         // …‚ğ‰ñ•œ

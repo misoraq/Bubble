@@ -133,14 +133,32 @@ public class JellyfishBubbleHit : MonoBehaviour
         }
     }
 
+
     private void ReleaseBubble()
     {
+        if (!isBubbled || isDefeated)
+            return;
+
+        EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
+
+        if (pop != null)
+            pop.PlayPop();
+
         isBubbled = false;
         currentHits = 0;
-        if (bubbleVisual != null) bubbleVisual.SetActive(false);
-        if (movement != null) movement.enabled = true;
-        if (attack != null) attack.PauseForBubble(false);
+
+        GetComponent<BubbleFinish>()?.ResetHits();
+
+        if (bubbleVisual != null)
+            bubbleVisual.SetActive(false);
+
+        if (movement != null)
+            movement.enabled = true;
+
+        if (attack != null)
+            attack.PauseForBubble(false);
     }
+
 
     private bool IsAboveScreen()
     {
@@ -149,14 +167,40 @@ public class JellyfishBubbleHit : MonoBehaviour
         return spriteRenderer.bounds.center.y > top - defeatHeightOffset;
     }
 
+
     private void Defeat()
     {
-        if (!isBubbled || isDefeated) return;
+        if (!isBubbled || isDefeated)
+            return;
+
         isDefeated = true;
-        StageManager stageManager = FindObjectOfType<StageManager>();
-        if (stageManager != null) stageManager.AddDefeatedEnemy();
-        WaterGun waterGun = FindObjectOfType<WaterGun>();
-        if (waterGun != null) waterGun.RecoverWater(waterRecoveryAmount);
+
+        // Œ‚”jŽž‚É‚à–A‚ªŠ„‚ê‚é
+        EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
+
+        if (pop != null)
+            pop.PlayPop();
+
+        StageManager stageManager =
+            FindObjectOfType<StageManager>();
+
+        if (stageManager != null)
+            stageManager.AddDefeatedEnemy("Jellyfish");
+
+        WaterGun waterGun =
+            FindObjectOfType<WaterGun>();
+
+        if (waterGun != null)
+            waterGun.RecoverWater(waterRecoveryAmount);
+
         Destroy(gameObject);
+    }
+
+    public void DefeatByAdditionalHits()
+    {
+        if (!isBubbled || isDefeated)
+            return;
+
+        Defeat();
     }
 }
