@@ -1,4 +1,4 @@
-
+ï»¿
 using UnityEngine;
 
 public class GunSkinManager : MonoBehaviour
@@ -11,15 +11,17 @@ public class GunSkinManager : MonoBehaviour
 
     private const string BestStarsKey = "BestClearStars";
     private const string EquippedSkinKey = "EquippedGunSkin";
-
-    [ContextMenu("ƒeƒXƒg—pFƒXƒLƒ“‰ğ•úƒŠƒZƒbƒg")]
+    public const int PufferGun = 3;
+    public const int JellyfishGun = 4;
+    public const int CrabGun = 5;
+    [ContextMenu("ãƒ†ã‚¹ãƒˆç”¨ï¼šã‚¹ã‚­ãƒ³è§£æ”¾ãƒªã‚»ãƒƒãƒˆ")]
     private void ResetSkinUnlockTest()
     {
         PlayerPrefs.SetInt("BestClearStars", 0);
         PlayerPrefs.SetInt("EquippedGunSkin", 0);
         PlayerPrefs.Save();
 
-        Debug.Log("ƒXƒLƒ“‰ğ•úƒf[ƒ^‚ğƒŠƒZƒbƒg‚µ‚Ü‚µ‚½");
+        Debug.Log("ã‚¹ã‚­ãƒ³è§£æ”¾ãƒ‡ãƒ¼ã‚¿ã‚’ãƒªã‚»ãƒƒãƒˆã—ã¾ã—ãŸ");
     }
     private void Awake()
     {
@@ -33,13 +35,13 @@ public class GunSkinManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ‰ß‹Å‚‚Ì¯•]‰¿‚ğæ“¾
+    // éå»æœ€é«˜ã®æ˜Ÿè©•ä¾¡ã‚’å–å¾—
     public int GetBestStars()
     {
         return PlayerPrefs.GetInt(BestStarsKey, 0);
     }
 
-    // ƒXƒe[ƒWƒNƒŠƒA‚ÉŒÄ‚Ño‚·
+    // ã‚¹ãƒ†ãƒ¼ã‚¸ã‚¯ãƒªã‚¢æ™‚ã«å‘¼ã³å‡ºã™
     public void RegisterClearStars(int stars)
     {
         stars = Mathf.Clamp(stars, 1, 3);
@@ -51,7 +53,7 @@ public class GunSkinManager : MonoBehaviour
         }
     }
 
-    // ƒXƒLƒ“‚ª‰ğ•ú‚³‚ê‚Ä‚¢‚é‚©
+    // ã‚¹ã‚­ãƒ³ãŒè§£æ”¾ã•ã‚Œã¦ã„ã‚‹ã‹
     public bool IsUnlocked(int skinId)
     {
         switch (skinId)
@@ -65,14 +67,31 @@ public class GunSkinManager : MonoBehaviour
             case BowGun:
                 return GetBestStars() >= 3;
 
+            case PufferGun:
+                return EnemyKillRecords.GetKills("Pufferfish") >= 20;
+
+            case JellyfishGun:
+                return EnemyKillRecords.GetKills("Jellyfish") >= 20;
+
+            case CrabGun:
+                return EnemyKillRecords.GetKills("Crab") >= 15;
+
             default:
                 return false;
         }
     }
 
-    // ƒXƒLƒ“‚ğ‘•”õ
+    // ã‚¹ã‚­ãƒ³ã‚’è£…å‚™
     public bool EquipSkin(int skinId)
     {
+        // æœªå®Œæˆã®ã‚¹ã‚­ãƒ³4ã€œ6ã¯è£…å‚™ç¦æ­¢
+        if (skinId == PufferGun ||
+            skinId == JellyfishGun ||
+            skinId == CrabGun)
+        {
+            return false;
+        }
+
         if (!IsUnlocked(skinId))
             return false;
 
@@ -82,7 +101,7 @@ public class GunSkinManager : MonoBehaviour
         return true;
     }
 
-    // Œ»İ‘•”õ‚µ‚Ä‚¢‚éƒXƒLƒ“
+    // ç¾åœ¨è£…å‚™ã—ã¦ã„ã‚‹ã‚¹ã‚­ãƒ³
     public int GetEquippedSkin()
     {
         int skinId = PlayerPrefs.GetInt(EquippedSkinKey, NormalGun);

@@ -87,9 +87,10 @@ public class BubbleFinish : MonoBehaviour
     private void FinishEnemy()
     {
         Enemy enemy = GetComponent<Enemy>();
+
         if (enemy != null)
         {
-            enemy.Defeat();
+            enemy.Defeat(true);
             return;
         }
 
@@ -98,14 +99,15 @@ public class BubbleFinish : MonoBehaviour
 
         if (jellyfish != null)
         {
-            jellyfish.DefeatByAdditionalHits();
+            jellyfish.DefeatByAdditionalHits(true);
             return;
         }
 
         CrabBubbleHit crab = GetComponent<CrabBubbleHit>();
+
         if (crab != null)
         {
-            crab.Defeat();
+            crab.Defeat(true);
         }
     }
 

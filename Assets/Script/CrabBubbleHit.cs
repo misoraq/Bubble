@@ -19,7 +19,8 @@ public class CrabBubbleHit : MonoBehaviour
     private GameObject captureBubble;
     private Coroutine stunCoroutine;
     private Coroutine captureCoroutine;
-
+    [Header("Œ‚”j‚Ì…‰ñ•œ")]
+    [SerializeField] private int waterRecoveryAmount = 2;
     public bool IsBubbled { get; private set; }
 
     private void Awake()
@@ -196,7 +197,7 @@ public class CrabBubbleHit : MonoBehaviour
 
 
 
-    public void Defeat()
+    public void Defeat(bool isPerfect = false)
     {
         if (!IsBubbled)
             return;
@@ -207,7 +208,6 @@ public class CrabBubbleHit : MonoBehaviour
             captureCoroutine = null;
         }
 
-        // Œ‚”j‚É‚à–A‚ªŠ„‚ê‚é
         EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
 
         if (pop != null)
@@ -218,6 +218,18 @@ public class CrabBubbleHit : MonoBehaviour
 
         if (stageManager != null)
             stageManager.AddDefeatedEnemy("Crab");
+
+        WaterGun waterGun =
+            FindObjectOfType<WaterGun>();
+
+        if (waterGun != null)
+        {
+            int recoveryAmount = isPerfect
+                ? waterRecoveryAmount * 2
+                : waterRecoveryAmount;
+
+            waterGun.RecoverWater(recoveryAmount);
+        }
 
         Destroy(gameObject);
     }

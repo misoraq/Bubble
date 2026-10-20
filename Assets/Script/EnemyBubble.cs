@@ -14,6 +14,11 @@ public class EnemyBubble : MonoBehaviour
     [Header("泡が大きくなるときの移動距離")]
     [SerializeField] private float maxChargeOffset = 0.25f;
 
+    [Header("泡のアニメーション")]
+    [SerializeField] private Animator bubbleAnimator;
+
+    [Header("泡の見た目")]
+    [SerializeField] private Transform bubbleVisual;
     private Vector3 startLocalPosition;
     private bool isCharging = true;
     private bool isShot = false;
@@ -30,6 +35,12 @@ public class EnemyBubble : MonoBehaviour
 
         // チャージ開始時の位置を保存
         startLocalPosition = transform.localPosition;
+
+        // チャージ中はアニメーション停止
+        if (bubbleAnimator != null)
+        {
+            bubbleAnimator.speed = 0f;
+        }
     }
 
     private void Update()
@@ -69,9 +80,9 @@ public class EnemyBubble : MonoBehaviour
                     inflateAmount
                 );
 
-            transform.localPosition =
-                startLocalPosition +
-                Vector3.left * chargeOffset;
+            // ワールド座標でプレイヤー方向へ移動
+            /*transform.position +=
+                (Vector3)(moveDirection * growSpeed * Time.deltaTime);*/
 
             // 敵の膨張アニメーション
             if (ownerEnemy != null)
@@ -101,14 +112,20 @@ public class EnemyBubble : MonoBehaviour
         isCharging = false;
         isShot = true;
 
-        // 敵から切り離す
+        // 発射した瞬間にアニメーション開始
+        if (bubbleAnimator != null)
+        {
+            bubbleAnimator.speed = 1f;
+        }
+
+        // フグから切り離す
         transform.SetParent(null);
 
         if (ownerEnemy != null)
         {
             ownerEnemy.ResetInflateSmooth(0.6f);
 
-            // 敵の攻撃終了
+            // フグの攻撃終了
             ownerEnemy.EndAttack();
         }
     }
@@ -116,13 +133,43 @@ public class EnemyBubble : MonoBehaviour
     // 新規：斜め方向の発射に対応
     public void SetDirection(Vector2 direction)
     {
+        if (direction.sqrMagnitude < 0.001f)
+            return;
+
         moveDirection = direction.normalized;
+
+        // プレイヤー方向の角度
+        float angle = Mathf.Atan2(
+            moveDirection.y,
+            moveDirection.x
+        ) * Mathf.Rad2Deg;
+
+        if (bubbleVisual != null)
+        {
+            // 親オブジェクトの左右反転を補正
+            Vector3 scale = bubbleVisual.localScale;
+
+            if (transform.lossyScale.x < 0f)
+            {
+                scale.x = -Mathf.Abs(scale.x);
+            }
+            else
+            {
+                scale.x = Mathf.Abs(scale.x);
+            }
+
+            bubbleVisual.localScale = scale;
+
+            // 泡の先端をプレイヤーに向ける
+            bubbleVisual.rotation =
+                Quaternion.Euler(0f, 0f, angle);
+        }
     }
 
     // 既存の左右攻撃にも対応
     public void SetDirection(float direction)
     {
-        moveDirection = new Vector2(direction, 0f);
+        SetDirection(new Vector2(direction, 0f));
     }
 
     private void OnTriggerEnter2D(Collider2D other)

@@ -168,14 +168,13 @@ public class JellyfishBubbleHit : MonoBehaviour
     }
 
 
-    private void Defeat()
+    private void Defeat(bool isPerfect = false)
     {
         if (!isBubbled || isDefeated)
             return;
 
         isDefeated = true;
 
-        // Œ‚”jŽž‚É‚à–A‚ªŠ„‚ê‚é
         EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
 
         if (pop != null)
@@ -191,16 +190,22 @@ public class JellyfishBubbleHit : MonoBehaviour
             FindObjectOfType<WaterGun>();
 
         if (waterGun != null)
-            waterGun.RecoverWater(waterRecoveryAmount);
+        {
+            int recoveryAmount = isPerfect
+                ? waterRecoveryAmount * 2
+                : waterRecoveryAmount;
+
+            waterGun.RecoverWater(recoveryAmount);
+        }
 
         Destroy(gameObject);
     }
 
-    public void DefeatByAdditionalHits()
+    public void DefeatByAdditionalHits(bool isPerfect = false)
     {
         if (!isBubbled || isDefeated)
             return;
 
-        Defeat();
+        Defeat(isPerfect);
     }
 }

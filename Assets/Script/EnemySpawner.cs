@@ -11,8 +11,8 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private GameObject crabPrefab;
 
     [Header("Wave設定")]
-    [SerializeField] private int totalWaves = 5;
-    [SerializeField] private int enemiesPerWave = 3;
+    [SerializeField] private int wavesPerPhase = 5;
+    [SerializeField] private int enemiesPerWave = 2;
     [SerializeField] private float nextWaveDelay = 2f;
     [SerializeField] private float spawnInterval = 0.5f;
 
@@ -34,7 +34,10 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private float minimumSpawnDistance = 2.5f;
     [SerializeField] private int positionSearchAttempts = 30;
 
+    private const int PhaseCount = 3;
+    private int totalWaves;
     private int currentWave;
+    private readonly List<GameObject> stageSpawnOrder = new List<GameObject>();
     private bool isSpawning;
     private bool waitingNextWave;
 
@@ -57,8 +60,15 @@ public class EnemySpawner : MonoBehaviour
 
     private void Start()
     {
-        totalWaves = Mathf.Max(1, totalWaves);
-        enemiesPerWave = Mathf.Max(1, enemiesPerWave);
+        wavesPerPhase = 5;
+        enemiesPerWave = 2;
+        totalWaves = PhaseCount * wavesPerPhase;
+
+        if (!BuildStageSpawnOrder())
+        {
+            enabled = false;
+            return;
+        }
 
         StageManager stageManager =
             FindObjectOfType<StageManager>();
@@ -99,8 +109,8 @@ public class EnemySpawner : MonoBehaviour
 
         yield return new WaitForSeconds(nextWaveDelay);
 
-        waitingNextWave = false;
         StartCoroutine(SpawnWaveRoutine());
+        waitingNextWave = false;
     }
 
     private IEnumerator SpawnWaveRoutine()
@@ -115,37 +125,12 @@ public class EnemySpawner : MonoBehaviour
             "Wave " + currentWave + " / " + totalWaves
         );
 
-        List<GameObject> prefabs = GetAvailablePrefabs();
+        int phase = (currentWave - 1) / wavesPerPhase + 1;
+        int waveInPhase = (currentWave - 1) % wavesPerPhase + 1;
+        Debug.Log("PHASE " + phase + " / 3  Wave " + waveInPhase + " / " + wavesPerPhase);
 
-        if (prefabs.Count == 0)
-        {
-            Debug.LogError(
-                "EnemySpawner: 敵Prefabが未設定です。"
-            );
-
-            isSpawning = false;
-            yield break;
-        }
-
-        // 各種類をなるべく均等に出す
-        List<GameObject> spawnOrder =
-            new List<GameObject>();
-
-        while (spawnOrder.Count < enemiesPerWave)
-        {
-            List<GameObject> shuffled =
-                new List<GameObject>(prefabs);
-
-            Shuffle(shuffled);
-
-            foreach (GameObject prefab in shuffled)
-            {
-                if (spawnOrder.Count >= enemiesPerWave)
-                    break;
-
-                spawnOrder.Add(prefab);
-            }
-        }
+        int startIndex = (currentWave - 1) * enemiesPerWave;
+        List<GameObject> spawnOrder = stageSpawnOrder.GetRange(startIndex, enemiesPerWave);
 
         StageManager stageManager =
             FindObjectOfType<StageManager>();
@@ -183,21 +168,29 @@ public class EnemySpawner : MonoBehaviour
         isSpawning = false;
     }
 
-    private List<GameObject> GetAvailablePrefabs()
+    private bool BuildStageSpawnOrder()
     {
-        List<GameObject> result =
-            new List<GameObject>();
+        if (enemyPrefab == null || jellyfishPrefab == null || crabPrefab == null)
+        {
+            Debug.LogError("EnemySpawner: フグ・クラゲ・カニのPrefabをすべて設定してください。");
+            return false;
+        }
 
-        if (enemyPrefab != null)
-            result.Add(enemyPrefab);
+        stageSpawnOrder.Clear();
+        AddPhaseEnemies(7, 2, 1); // PHASE 1
+        AddPhaseEnemies(4, 4, 2); // PHASE 2
+        AddPhaseEnemies(3, 3, 4); // PHASE 3
+        return true;
+    }
 
-        if (jellyfishPrefab != null)
-            result.Add(jellyfishPrefab);
-
-        if (crabPrefab != null)
-            result.Add(crabPrefab);
-
-        return result;
+    private void AddPhaseEnemies(int pufferfish, int jellyfish, int crab)
+    {
+        List<GameObject> phaseEnemies = new List<GameObject>();
+        for (int i = 0; i < pufferfish; i++) phaseEnemies.Add(enemyPrefab);
+        for (int i = 0; i < jellyfish; i++) phaseEnemies.Add(jellyfishPrefab);
+        for (int i = 0; i < crab; i++) phaseEnemies.Add(crabPrefab);
+        Shuffle(phaseEnemies);
+        stageSpawnOrder.AddRange(phaseEnemies);
     }
 
     private void Shuffle(List<GameObject> list)

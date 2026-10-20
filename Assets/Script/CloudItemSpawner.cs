@@ -7,6 +7,13 @@ public class CloudItemSpawner : MonoBehaviour
     [Header("雲")]
     [SerializeField] private SpriteRenderer cloudSprite;
 
+    [Header("チャージ表示")]
+    [SerializeField] private SpriteRenderer chargeFill;
+    [SerializeField] private SpriteMask chargeMask;
+    [SerializeField]
+    private Color cooldownColor =
+        new Color(0.5f, 0.55f, 0.6f, 1f);
+
     [Header("出現位置")]
     [SerializeField] private Transform spawnPoint;
 
@@ -29,22 +36,47 @@ public class CloudItemSpawner : MonoBehaviour
 
     [Header("雷の表示時間")]
     [SerializeField] private float lightningDuration = 0.3f;
-    [Header("雷のランダム方向")]
+
+    [Header("雷の距離")]
     [SerializeField] private float lightningDistance = 1.5f;
+
     [Header("プレイヤー")]
     [SerializeField] private Transform player;
+
     private Color originalColor;
+    private Vector3 maskOriginalScale;
+    private Vector3 maskOriginalPosition;
+    private float maskHeight;
 
     private void Start()
     {
         if (cloudSprite == null || spawnPoint == null)
         {
-            Debug.LogWarning("雲またはSpawnPointが未設定です");
+            Debug.LogWarning(
+                "雲またはSpawnPointが未設定です"
+            );
+
             enabled = false;
             return;
         }
 
         originalColor = cloudSprite.color;
+
+        if (chargeFill != null && chargeMask != null)
+        {
+            chargeFill.sprite = cloudSprite.sprite;
+            chargeFill.color = originalColor;
+
+            chargeFill.maskInteraction =
+                SpriteMaskInteraction.VisibleInsideMask;
+
+            maskOriginalScale = chargeMask.transform.localScale;
+            maskOriginalPosition = chargeMask.transform.localPosition;
+
+            // マスクの初期サイズを保存
+            maskHeight = chargeMask.bounds.size.y;
+        }
+
         StartCoroutine(SpawnLoop());
     }
 
@@ -56,41 +88,74 @@ public class CloudItemSpawner : MonoBehaviour
                 ? Random.Range(minInterval, maxInterval)
                 : spawnInterval;
 
-            yield return new WaitForSeconds(
-                Mathf.Max(0.1f, waitTime)
-            );
+            waitTime = Mathf.Max(0.1f, waitTime);
+
+            // クールタイム開始
+            cloudSprite.color = cooldownColor;
+
+            if (chargeFill != null)
+                chargeFill.enabled = true;
+
+            SetChargeProgress(0f);
+
+            // 時間に合わせて下からたまる
+            float timer = 0f;
+
+            while (timer < waitTime)
+            {
+                timer += Time.deltaTime;
+
+                float progress =
+                    Mathf.Clamp01(timer / waitTime);
+
+                SetChargeProgress(progress);
+
+                yield return null;
+            }
+
+            // チャージ完了
+            SetChargeProgress(1f);
+
+            // 点滅中は元の雲だけ表示
+            if (chargeFill != null)
+                chargeFill.enabled = false;
+
+            cloudSprite.color = originalColor;
 
             // 黄色く点滅
             for (int i = 0; i < flashCount; i++)
             {
                 cloudSprite.color = flashColor;
-                yield return new WaitForSeconds(flashInterval);
+
+                yield return new WaitForSeconds(
+                    flashInterval
+                );
 
                 cloudSprite.color = originalColor;
-                yield return new WaitForSeconds(flashInterval);
+
+                yield return new WaitForSeconds(
+                    flashInterval
+                );
             }
 
-            // 360度からランダムな角度を選ぶ
-
+            // 雷の方向を決定
             Vector3 startPosition = cloudSprite.bounds.center;
 
-            // 現在のプレイヤーの位置に向ける
             Vector2 direction = player != null
                 ? ((Vector2)(player.position - startPosition)).normalized
                 : Vector2.down;
 
-            // プレイヤー方向の角度を計算
-            float angle = Mathf.Atan2(direction.y, direction.x)
-                          * Mathf.Rad2Deg;
-
+            float angle =
+                Mathf.Atan2(direction.y, direction.x)
+                * Mathf.Rad2Deg;
 
             Vector3 endPosition =
-                startPosition + (Vector3)(direction * lightningDistance);
+                startPosition +
+                (Vector3)(direction * lightningDistance);
 
-            // 雷の角度
             float rotationZ = angle - 90f;
 
-            // 青い雷を表示
+            // 青い雷を生成
             if (blueLightningPrefab != null)
             {
                 GameObject lightning = Instantiate(
@@ -102,14 +167,14 @@ public class CloudItemSpawner : MonoBehaviour
                 lightning.transform.position =
                     (startPosition + endPosition) * 0.5f;
 
-                // 指定秒数後に雷を削除
                 Destroy(lightning, lightningDuration);
             }
 
-            yield return new WaitForSeconds(lightningDuration);
+            yield return new WaitForSeconds(
+                lightningDuration
+            );
 
-
-            // 泡エフェクトの先端から回復アイテムを出現
+            // 回復アイテムを生成
             if (recoveryPrefab != null)
             {
                 GameObject item = Instantiate(
@@ -122,18 +187,46 @@ public class CloudItemSpawner : MonoBehaviour
                     item.GetComponent<RecoveryItem>();
 
                 if (recoveryItem != null)
-                {
-                    // 泡エフェクトと同じ方向に飛ばす
                     recoveryItem.SetDirection(direction);
-                }
             }
-
         }
+    }
+
+    private void SetChargeProgress(float progress)
+    {
+        if (chargeMask == null)
+            return;
+
+        progress = Mathf.Clamp01(progress);
+
+        Transform maskTransform = chargeMask.transform;
+
+        // マスクの高さを下から上へ伸ばす
+        Vector3 scale = maskOriginalScale;
+
+        scale.y = maskOriginalScale.y *
+                  Mathf.Max(0.001f, progress);
+
+        maskTransform.localScale = scale;
+
+        // 下端を固定するため、中心を下に移動する
+        Vector3 position = maskOriginalPosition;
+
+        float fullHeight =
+            chargeMask.sprite.bounds.size.y *
+            Mathf.Abs(maskOriginalScale.y);
+
+        position.y -= fullHeight * (1f - progress) * 0.5f;
+
+        maskTransform.localPosition = position;
     }
 
     private void OnDisable()
     {
         if (cloudSprite != null)
             cloudSprite.color = originalColor;
+
+        if (chargeFill != null)
+            chargeFill.enabled = false;
     }
 }

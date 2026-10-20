@@ -31,6 +31,8 @@ public class StageManager : MonoBehaviour
     [SerializeField] private TMP_Text pufferfishCountText;
     [SerializeField] private TMP_Text jellyfishCountText;
     [SerializeField] private TMP_Text crabCountText;
+    [Header("クリア画面遷移")]
+    [SerializeField] private ClearBubbleTransition clearBubbleTransition;
     private void Start()
     {
         enemySpawner =
@@ -78,17 +80,13 @@ public class StageManager : MonoBehaviour
 
     private void StageClear()
     {
+        FreezePlayer();
         stageCleared = true;
 
         Debug.Log("ステージクリア！");
         Debug.Log("最終撃破数 : " + defeatedEnemies);
 
-        // 敵ごとの撃破数を表示
-        UpdateResultUI();
-
-        // リザルト画面を表示
-        if (clearPanel != null)
-            clearPanel.SetActive(true);
+        
 
         int stars = 1;
 
@@ -133,6 +131,18 @@ public class StageManager : MonoBehaviour
                 "GunSkinManagerが見つかりません"
             );
         }
+        // 敵別撃破数をリザルトUIに反映
+        UpdateResultUI();
+
+        // 泡の演出を開始
+        if (clearBubbleTransition != null)
+        {
+            clearBubbleTransition.PlayTransition();
+        }
+        else if (clearPanel != null)
+        {
+            clearPanel.SetActive(true);
+        }
     }
 
     public void RetryStage()
@@ -157,9 +167,10 @@ public class StageManager : MonoBehaviour
         Debug.Log("敵撃破数 : " + defeatedEnemies);
     }
 
+
     public void AddDefeatedEnemy(string enemyType)
     {
-        // 既存の総撃破数を更新
+        // 今回のステージの撃破数
         AddDefeatedEnemy();
 
         switch (enemyType)
@@ -175,14 +186,24 @@ public class StageManager : MonoBehaviour
             case "Crab":
                 crabKills++;
                 break;
+
+            default:
+                Debug.LogWarning(
+                    "不明な敵の種類: " + enemyType
+                );
+                return;
         }
 
+        // ステージをまたいだ累計撃破数を保存
+        EnemyKillRecords.RecordKill(enemyType);
+
         Debug.Log(
-            "ハリセンボン：" + pufferfishKills +
-            " / クラゲ：" + jellyfishKills +
-            " / カニ：" + crabKills
+            "今回の撃破数 - フグ: " + pufferfishKills +
+            " / クラゲ: " + jellyfishKills +
+            " / カニ: " + crabKills
         );
     }
+
 
     public void AddSpawnedEnemy()
     {
@@ -220,5 +241,28 @@ public class StageManager : MonoBehaviour
         if (crabCountText != null)
             crabCountText.text = "× " + crabKills;
     }
+    private void FreezePlayer()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
 
+        if (player == null)
+            return;
+
+        // プレイヤーの操作を停止
+        PlayerMove controller =
+            player.GetComponent<PlayerMove>();
+
+        if (controller != null)
+            controller.enabled = false;
+
+        // プレイヤーの物理演算を停止
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.simulated = false;
+        }
+    }
 }

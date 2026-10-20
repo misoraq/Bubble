@@ -86,6 +86,20 @@ public class GunSkinUI : MonoBehaviour
     {
         ShowSkin(GunSkinManager.BowGun);
     }
+    public void SelectPufferGun()
+    {
+        ShowSkin(GunSkinManager.PufferGun);
+    }
+
+    public void SelectJellyfishGun()
+    {
+        ShowSkin(GunSkinManager.JellyfishGun);
+    }
+
+    public void SelectCrabGun()
+    {
+        ShowSkin(GunSkinManager.CrabGun);
+    }
 
     private void ShowSkin(int skinId)
     {
@@ -115,6 +129,20 @@ public class GunSkinUI : MonoBehaviour
                 skinNameText.text = "BOW GUN";
                 skinImage.sprite = bowGunSprite;
                 break;
+            case GunSkinManager.PufferGun:
+                skinNameText.text = "SKIN 4";
+                skinImage.sprite = null;
+                break;
+
+            case GunSkinManager.JellyfishGun:
+                skinNameText.text = "SKIN 5";
+                skinImage.sprite = null;
+                break;
+
+            case GunSkinManager.CrabGun:
+                skinNameText.text = "SKIN 6";
+                skinImage.sprite = null;
+                break;
         }
 
         GunSkinManager manager = GunSkinManager.Instance;
@@ -137,11 +165,70 @@ public class GunSkinUI : MonoBehaviour
             {
                 unlockConditionText.text = "¯3‚Å‰ð•ú";
             }
+            else if (skinId == GunSkinManager.PufferGun)
+            {
+                int kills = EnemyKillRecords.GetKills("Pufferfish");
+
+                unlockConditionText.text =
+                    $"ƒtƒO‚ð20‘ÌŒ‚”j\n{Mathf.Min(kills, 20)} / 20";
+            }
+            else if (skinId == GunSkinManager.JellyfishGun)
+            {
+                int kills = EnemyKillRecords.GetKills("Jellyfish");
+
+                unlockConditionText.text =
+                    $"ƒNƒ‰ƒQ‚ð20‘ÌŒ‚”j\n{Mathf.Min(kills, 20)} / 20";
+            }
+            else if (skinId == GunSkinManager.CrabGun)
+            {
+                int kills = EnemyKillRecords.GetKills("Crab");
+
+                unlockConditionText.text =
+                    $"ƒJƒj‚ð15‘ÌŒ‚”j\n{Mathf.Min(kills, 15)} / 15";
+            }
         }
 
         // ‰æ‘œ‚Ìc‰¡”ä‚ðˆÛŽ
         skinImage.preserveAspect = true;
         skinImage.enabled = skinImage.sprite != null;
+        if (skinId == GunSkinManager.PufferGun ||
+    skinId == GunSkinManager.JellyfishGun ||
+    skinId == GunSkinManager.CrabGun)
+        {
+            string enemyType = "";
+            string enemyName = "";
+            int requiredKills = 0;
+
+            switch (skinId)
+            {
+                case GunSkinManager.PufferGun:
+                    enemyType = "Pufferfish";
+                    enemyName = "ƒtƒO";
+                    requiredKills = 20;
+                    break;
+
+                case GunSkinManager.JellyfishGun:
+                    enemyType = "Jellyfish";
+                    enemyName = "ƒNƒ‰ƒQ";
+                    requiredKills = 20;
+                    break;
+
+                case GunSkinManager.CrabGun:
+                    enemyType = "Crab";
+                    enemyName = "ƒJƒj";
+                    requiredKills = 15;
+                    break;
+            }
+
+            int kills = EnemyKillRecords.GetKills(enemyType);
+
+            unlockConditionText.text =
+                $"{enemyName}‚ð—ÝŒv{requiredKills}‘ÌŒ‚”j\n" +
+                $"{Mathf.Min(kills, requiredKills)} / {requiredKills}\n" +
+                (kills >= requiredKills
+                    ? "ðŒ’B¬I •Ší‚Í€”õ’†"
+                    : "–¢‰ð•ú");
+        }
         UpdateEquipButton();
     }
 
@@ -151,7 +238,13 @@ public class GunSkinUI : MonoBehaviour
 
         if (manager == null || equipButton == null || equipButtonText == null)
             return;
-
+        if (selectedSkinId >= GunSkinManager.PufferGun &&
+    selectedSkinId <= GunSkinManager.CrabGun)
+        {
+            equipButtonText.text = "€”õ’†";
+            equipButton.interactable = false;
+            return;
+        }
         if (manager.GetEquippedSkin() == selectedSkinId)
         {
             equipButtonText.text = "‘•”õ’†";

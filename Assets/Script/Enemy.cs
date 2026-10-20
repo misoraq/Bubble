@@ -323,38 +323,34 @@ public class Enemy : MonoBehaviour
             dashUI.SetActive(show);
         }
     }
-    public void Defeat()
+    public void Defeat(bool isPerfect = false)
     {
         if (!isBubbled)
-        {
             return;
-        }
 
         Debug.Log("敵を撃破！");
+
         EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
 
         if (pop != null)
-        {
             pop.PlayPop();
-        }
-        // 撃破数を増やす
+
         StageManager stageManager =
             FindObjectOfType<StageManager>();
 
         if (stageManager != null)
-        {
             stageManager.AddDefeatedEnemy("Pufferfish");
-        }
 
-        // 水を回復
         WaterGun waterGun =
             FindObjectOfType<WaterGun>();
 
         if (waterGun != null)
         {
-            waterGun.RecoverWater(
-                waterRecoveryAmount
-            );
+            int recoveryAmount = isPerfect
+                ? waterRecoveryAmount * 2
+                : waterRecoveryAmount;
+
+            waterGun.RecoverWater(recoveryAmount);
         }
 
         Destroy(gameObject);
@@ -447,9 +443,14 @@ public class Enemy : MonoBehaviour
             return;
 
         isAttacking = true;
-        float directionX = Mathf.Sign(transform.localScale.x);
-        Vector3 bubblePosition = attackMuzzle.position +
-            new Vector3(directionX * attackBubbleOffsetX, 0f, 0f);
+        // フグの口からプレイヤーへの方向
+        Vector2 shootDirection =
+            (player.position - attackMuzzle.position).normalized;
+
+        // 泡の生成位置を口から少し前にずらす
+        Vector3 bubblePosition =
+            attackMuzzle.position +
+            (Vector3)(shootDirection * attackBubbleOffsetX);
 
         GameObject bubbleObject = Instantiate(
             enemyBubblePrefab, bubblePosition, Quaternion.identity, attackMuzzle);
@@ -464,6 +465,7 @@ public class Enemy : MonoBehaviour
         }
 
         enemyBubble.SetOwner(this);
+        enemyBubble.SetDirection(shootDirection);
         if (aimCoroutine != null) StopCoroutine(aimCoroutine);
         aimCoroutine = StartCoroutine(AimBeforeShot(enemyBubble));
     }
