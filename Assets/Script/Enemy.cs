@@ -188,7 +188,13 @@ public class Enemy : MonoBehaviour
             // ŠÔØ‚ê‚È‚ç“G‚ğ‰ğ•ú
             if (bubbleTimer <= 0f)
             {
-                ReleaseBubble();
+                BubbleFinish bubbleFinish = GetComponent<BubbleFinish>();
+
+                // 3”­–Ú‚ª¬—§‚µ‚Ä‚¢‚éê‡‚Í–A‚ğ‰ğœ‚µ‚È‚¢
+                if (bubbleFinish == null || !bubbleFinish.IsFinishing)
+                {
+                    ReleaseBubble();
+                }
             }
         }
         if (knockbackTimer > 0f)

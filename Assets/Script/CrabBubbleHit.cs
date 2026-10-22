@@ -145,7 +145,14 @@ public class CrabBubbleHit : MonoBehaviour
         }
 
         captureCoroutine = null;
-        Release();
+
+        BubbleFinish bubbleFinish = GetComponent<BubbleFinish>();
+
+        // PERFECTŒ‚”j‚ªŠm’è‚µ‚Ä‚¢‚éê‡‚Í–A‰ğœ‚µ‚È‚¢
+        if (bubbleFinish == null || !bubbleFinish.IsFinishing)
+        {
+            Release();
+        }
     }
 
     private bool IsAboveScreen()

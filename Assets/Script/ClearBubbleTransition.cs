@@ -2,7 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-
+using PixelBattleText;
 public class ClearBubbleTransition : MonoBehaviour
 {
     [Header("泡のUI")]
@@ -43,6 +43,10 @@ public class ClearBubbleTransition : MonoBehaviour
     private IEnumerator TransitionRoutine()
     {
         isPlaying = true;
+        // クリア演出中は新しい文字を生成させない
+        PixelBattleTextController.SuppressTextDisplay = true;
+        // クリア演出開始時にHIT・PERFECTの文字を消去
+        PixelBattleTextController.ClearAllTexts();
 
         // ① ゲーム全体を徐々にスローモーションにする
         yield return StartCoroutine(SlowMotionRoutine());

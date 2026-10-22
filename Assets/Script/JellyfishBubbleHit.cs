@@ -83,7 +83,13 @@ public class JellyfishBubbleHit : MonoBehaviour
 
         if (bubbleTimer <= 0f)
         {
-            ReleaseBubble();
+            BubbleFinish bubbleFinish = GetComponent<BubbleFinish>();
+
+            // PERFECTŒ‚”j‚ªŠm’è‚µ‚Ä‚¢‚éŠÔ‚Í–A‚ğ‰ğœ‚µ‚È‚¢
+            if (bubbleFinish == null || !bubbleFinish.IsFinishing)
+            {
+                ReleaseBubble();
+            }
         }
     }
 

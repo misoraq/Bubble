@@ -17,8 +17,8 @@ namespace PixelBattleText
 		///<summary>If it is TRUE, This makes the text snap to the canvas "pixel grid".
 		///Useful for "chopping" animations that look too smooth if you need a more retro feeling.</summary>
 		public bool snapToPixelGrid;
-		
-		private Shader borderShader;
+        public static bool SuppressTextDisplay = false;
+        private Shader borderShader;
 		private List<TMP_Text[]> letters;
 		private Queue<TMP_Text[]> unusedLetters;
 		private List<AnimatedTextInstace> animatedTexts = new List<AnimatedTextInstace>();
@@ -93,8 +93,10 @@ namespace PixelBattleText
 
 		private void _DisplayText(string word, TextAnimation textAnimation, Vector2 position)
 		{
+            if (SuppressTextDisplay)
+                return;
 #if UNITY_EDITOR
-			if(!canvas)
+            if (!canvas)
 			{
 				Debug.LogWarning("The 'Canvas' field in the PixelBattleController is unassigned. Assigne it in order to use this function.\nThis error only logs in EDITOR MODE, in the project build this will just CRASH", this);
 				return;
@@ -147,8 +149,8 @@ namespace PixelBattleText
 				letterTransforms = letterTransforms,
 				letters = wordGraphics,
 				props = textAnimation,
-				startTime = Time.time,
-				pos = (position + new Vector2(alignmentOffset, 0)),
+                startTime = Time.unscaledTime,
+                pos = (position + new Vector2(alignmentOffset, 0)),
 				active = false,
 			};
 
@@ -160,6 +162,8 @@ namespace PixelBattleText
     Transform target,
     Vector3 offset)
         {
+            if (SuppressTextDisplay)
+                return;
             if (singleton == null || target == null || Camera.main == null)
                 return;
 
@@ -195,7 +199,24 @@ namespace PixelBattleText
 			}
 		}
 
-		private void Update()
+        public static void ClearAllTexts()
+        {
+            if (singleton == null)
+                return;
+
+            // ï\é¶íÜÇÃï∂éöÇÇ∑Ç◊ÇƒâÒé˚
+            for (int i = singleton.animatedTexts.Count - 1; i >= 0; i--)
+            {
+                singleton.RemoveText(i);
+            }
+
+            // í«è]èÓïÒÇ‡èâä˙âª
+            singleton.followTargets.Clear();
+            singleton.followOffsets.Clear();
+        }
+
+
+        private void Update()
 		{
 			for (int i = 0; i < animatedTexts.Count; i++)
 			{
@@ -253,10 +274,12 @@ namespace PixelBattleText
 					var letterStart =   start + delay * (props.invertAnimationOrder ? letters.Length - j : j);
 					var letterEnd = letterStart + duration;
 
-					//t is a frame independent progress counter (0-1) one or above means the transition has finished
-					var t = Mathf.Clamp01(Mathf.InverseLerp(letterStart, letterEnd, Time.time));
+                    //t is a frame independent progress counter (0-1) one or above means the transition has finished
+                    var t = Mathf.Clamp01(
+        Mathf.InverseLerp(letterStart, letterEnd, Time.unscaledTime)
+    );
 
-					var pivotT = props.spacingCurve.Evaluate(t);
+                    var pivotT = props.spacingCurve.Evaluate(t);
 					var letterPivot = new Vector2(
 						Mathf.Lerp(props.initialSpacing * j, props.endSpacing * j, pivotT), 0);
 
@@ -285,22 +308,24 @@ namespace PixelBattleText
 				if (allEnded)
 				{
 					text.animationFinished = true;
-					text.startTime = Time.time;
-					animatedTexts[i] = text;
+                    text.startTime = Time.unscaledTime;
+                    animatedTexts[i] = text;
 				}
 			}
 		}
 
-		private void Awake()
-		{
-			if (singleton)
-				Destroy(this);
-			else
-				singleton = this;
-		}
-		
-		// Start is called before the first frame update
-		private  void Start()
+        private void Awake()
+        {
+            SuppressTextDisplay = false;
+
+            if (singleton)
+                Destroy(this);
+            else
+                singleton = this;
+        }
+
+        // Start is called before the first frame update
+        private  void Start()
 		{
 			letters = new List<TMP_Text[]>();
 			unusedLetters = new Queue<TMP_Text[]>();

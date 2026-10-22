@@ -31,6 +31,9 @@ public class GunSkinUI : MonoBehaviour
     [SerializeField] private Image normalFrame;
     [SerializeField] private Image sharkFrame;
     [SerializeField] private Image bowFrame;
+    [SerializeField] private Image pufferFrame;
+    [SerializeField] private Image jellyfishFrame;
+    [SerializeField] private Image crabFrame;
 
     [SerializeField] private Sprite normalFrameSprite;
     [SerializeField] private Sprite selectedFrameSprite;
@@ -44,6 +47,21 @@ public class GunSkinUI : MonoBehaviour
     [Header("武器スプライト")]
     [SerializeField] private GameObject sharkGunImage;
     [SerializeField] private GameObject bowGunImage;
+    [Header("未完成スキンの詳細表示")]
+    [SerializeField] private GameObject skinQuestionText;
+
+    [Header("追加スキンの鍵マーク")]
+    [SerializeField] private GameObject pufferLockImage;
+    [SerializeField] private GameObject jellyfishLockImage;
+    [SerializeField] private GameObject crabLockImage;
+
+    [Header("追加スキンの進捗テキスト")]
+    [SerializeField] private TMP_Text pufferProgressText;
+    [SerializeField] private TMP_Text jellyfishProgressText;
+    [SerializeField] private TMP_Text crabProgressText;
+
+    [Header("テスト用")]
+    [SerializeField] private bool testLockedSkins = false;
     private void Start()
     {
         if (gunSkinPanel != null)
@@ -62,6 +80,9 @@ public class GunSkinUI : MonoBehaviour
         SelectNormalGun();
         UpdateAllSkinStatus();
         UpdateLockImages();
+
+        // 追加スキンの累計撃破数と鍵マークを更新
+        UpdateAdditionalSkinProgress();
     }
 
     public void CloseGunSkinPanel()
@@ -104,6 +125,15 @@ public class GunSkinUI : MonoBehaviour
     private void ShowSkin(int skinId)
     {
         selectedSkinId = skinId;
+        bool isComingSoonSkin =
+    skinId == GunSkinManager.PufferGun ||
+    skinId == GunSkinManager.JellyfishGun ||
+    skinId == GunSkinManager.CrabGun;
+
+        if (skinQuestionText != null)
+        {
+            skinQuestionText.SetActive(isComingSoonSkin);
+        }
         UpdateSelectedFrame();
         if (skinNameText == null ||
             skinImage == null ||
@@ -191,6 +221,25 @@ public class GunSkinUI : MonoBehaviour
         // 画像の縦横比を維持
         skinImage.preserveAspect = true;
         skinImage.enabled = skinImage.sprite != null;
+
+        // 詳細画面の武器画像も未解放なら黒くする
+        GunSkinManager skinManager = GunSkinManager.Instance;
+
+        bool isUnlocked = skinManager != null &&
+                          skinManager.IsUnlocked(skinId);
+
+        // テスト中はSHARK・BOWを未解放として表示
+        if (testLockedSkins &&
+            (skinId == GunSkinManager.SharkGun ||
+             skinId == GunSkinManager.BowGun))
+        {
+            isUnlocked = false;
+        }
+
+        skinImage.color = isUnlocked
+            ? Color.white
+            : Color.black;
+
         if (skinId == GunSkinManager.PufferGun ||
     skinId == GunSkinManager.JellyfishGun ||
     skinId == GunSkinManager.CrabGun)
@@ -346,48 +395,133 @@ public class GunSkinUI : MonoBehaviour
     }
     private void UpdateSelectedFrame()
     {
-        if (normalFrame != null)
-        {
-            normalFrame.sprite =
-                selectedSkinId == GunSkinManager.NormalGun
-                ? selectedFrameSprite : normalFrameSprite;
-        }
+        SetFrame(normalFrame, GunSkinManager.NormalGun);
+        SetFrame(sharkFrame, GunSkinManager.SharkGun);
+        SetFrame(bowFrame, GunSkinManager.BowGun);
 
-        if (sharkFrame != null)
-        {
-            sharkFrame.sprite =
-                selectedSkinId == GunSkinManager.SharkGun
-                ? selectedFrameSprite : normalFrameSprite;
-        }
-
-        if (bowFrame != null)
-        {
-            bowFrame.sprite =
-                selectedSkinId == GunSkinManager.BowGun
-                ? selectedFrameSprite : normalFrameSprite;
-        }
+        SetFrame(pufferFrame, GunSkinManager.PufferGun);
+        SetFrame(jellyfishFrame, GunSkinManager.JellyfishGun);
+        SetFrame(crabFrame, GunSkinManager.CrabGun);
     }
+
+
+    private void SetFrame(Image frame, int skinId)
+    {
+        if (frame == null)
+            return;
+
+        frame.sprite =
+            selectedSkinId == skinId
+            ? selectedFrameSprite
+            : normalFrameSprite;
+
+        // 元のデザインの色を維持
+        frame.color = Color.white;
+    }
+
+
     private void UpdateLockImages()
     {
         GunSkinManager manager = GunSkinManager.Instance;
 
-        if (manager == null) return;
+        if (manager == null)
+            return;
 
-        bool sharkUnlocked = manager.IsUnlocked(GunSkinManager.SharkGun);
-        bool bowUnlocked = manager.IsUnlocked(GunSkinManager.BowGun);
+        bool sharkUnlocked =
+     !testLockedSkins &&
+     manager.IsUnlocked(GunSkinManager.SharkGun);
 
-        // カギマーク
+        bool bowUnlocked =
+            !testLockedSkins &&
+            manager.IsUnlocked(GunSkinManager.BowGun);
+
+        // 鍵マークの表示
         if (sharkLockImage != null)
             sharkLockImage.SetActive(!sharkUnlocked);
 
         if (bowLockImage != null)
             bowLockImage.SetActive(!bowUnlocked);
 
-        // 武器スプライト
-        if (sharkGunImage != null)
-            sharkGunImage.SetActive(sharkUnlocked);
-
-        if (bowGunImage != null)
-            bowGunImage.SetActive(bowUnlocked);
+        // 武器画像は常に表示し、未解放なら黒くする
+        SetWeaponSilhouette(sharkGunImage, sharkUnlocked);
+        SetWeaponSilhouette(bowGunImage, bowUnlocked);
     }
+
+    // 未解放武器を黒いシルエットにする
+    private void SetWeaponSilhouette(
+        GameObject weaponObject,
+        bool isUnlocked)
+    {
+        if (weaponObject == null)
+            return;
+
+        weaponObject.SetActive(true);
+
+        Image weaponImage = weaponObject.GetComponent<Image>();
+
+        if (weaponImage == null)
+        {
+            Debug.LogWarning(
+                weaponObject.name + " にImageがありません。"
+            );
+            return;
+        }
+
+        weaponImage.color = isUnlocked
+            ? Color.white
+            : Color.black;
+    }
+
+    private void UpdateAdditionalSkinProgress()
+    {
+        UpdateSkinProgress(
+            GunSkinManager.PufferGun,
+            "Pufferfish",
+            20,
+            pufferLockImage,
+            pufferProgressText
+        );
+
+        UpdateSkinProgress(
+            GunSkinManager.JellyfishGun,
+            "Jellyfish",
+            20,
+            jellyfishLockImage,
+            jellyfishProgressText
+        );
+
+        UpdateSkinProgress(
+            GunSkinManager.CrabGun,
+            "Crab",
+            15,
+            crabLockImage,
+            crabProgressText
+        );
+    }
+
+    private void UpdateSkinProgress(
+        int skinId,
+        string enemyType,
+        int requiredKills,
+        GameObject lockImage,
+        TMP_Text progressText)
+    {
+        int kills = EnemyKillRecords.GetKills(enemyType);
+        bool conditionMet = kills >= requiredKills;
+
+        // 条件未達成のときだけ鍵を表示
+        if (lockImage != null)
+        {
+            lockImage.SetActive(!conditionMet);
+        }
+
+        if (progressText != null)
+        {
+            progressText.text = conditionMet
+                ? "条件達成"
+                : $"{Mathf.Min(kills, requiredKills)} / {requiredKills}";
+        }
+    }
+
+
 }

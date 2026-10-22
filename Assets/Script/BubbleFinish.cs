@@ -9,6 +9,7 @@ public class BubbleFinish : MonoBehaviour
     [SerializeField] private float finishDelay = 0.25f;
     private int currentHits = 0;
     private bool isDefeated = false;
+    public bool IsFinishing => isDefeated;
     [SerializeField] private BubbleHitIndicator hitIndicator;
 
     private void Update()

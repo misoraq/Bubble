@@ -10266,7 +10266,7 @@ MonoBehaviour:
   enemyPrefab: {fileID: 5318474180066397397, guid: a1aa6d1d784430940ae1cb51f9810bf7, type: 3}
   jellyfishPrefab: {fileID: 6875976139977420738, guid: 42f249ff6c1b2c24cb54dc1d05ed1602, type: 3}
   crabPrefab: {fileID: 1453070986396956721, guid: 57b3c2ece82c96d4da70ab238e622cc1, type: 3}
-  totalWaves: 2
+  wavesPerPhase: 5
   enemiesPerWave: 3
   nextWaveDelay: 2
   spawnInterval: 0.5
@@ -10281,6 +10281,7 @@ MonoBehaviour:
   warningEdgeMargin: 0.8
   minimumSpawnDistance: 2.5
   positionSearchAttempts: 30
+  quickClearTestMode: 1
 --- !u!1 &2072553160
 GameObject:
   m_ObjectHideFlags: 0

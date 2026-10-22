@@ -34,6 +34,9 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private float minimumSpawnDistance = 2.5f;
     [SerializeField] private int positionSearchAttempts = 30;
 
+    [Header("クリア演出テスト")]
+    [SerializeField] private bool quickClearTestMode = false;
+
     private const int PhaseCount = 3;
     private int totalWaves;
     private int currentWave;
@@ -58,11 +61,23 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+
     private void Start()
     {
-        wavesPerPhase = 5;
-        enemiesPerWave = 2;
-        totalWaves = PhaseCount * wavesPerPhase;
+        if (quickClearTestMode)
+        {
+            // テスト用：1Wave、敵1体だけ
+            wavesPerPhase = 1;
+            enemiesPerWave = 1;
+            totalWaves = 1;
+        }
+        else
+        {
+            // 通常モード：3フェーズ、各5Wave
+            wavesPerPhase = 5;
+            enemiesPerWave = 2;
+            totalWaves = PhaseCount * wavesPerPhase;
+        }
 
         if (!BuildStageSpawnOrder())
         {
@@ -82,6 +97,7 @@ public class EnemySpawner : MonoBehaviour
 
         StartCoroutine(SpawnWaveRoutine());
     }
+
 
     private void Update()
     {
@@ -168,20 +184,37 @@ public class EnemySpawner : MonoBehaviour
         isSpawning = false;
     }
 
+
     private bool BuildStageSpawnOrder()
     {
-        if (enemyPrefab == null || jellyfishPrefab == null || crabPrefab == null)
+        if (enemyPrefab == null ||
+            jellyfishPrefab == null ||
+            crabPrefab == null)
         {
-            Debug.LogError("EnemySpawner: フグ・クラゲ・カニのPrefabをすべて設定してください。");
+            Debug.LogError(
+                "EnemySpawner: 敵Prefabが設定されていません。"
+            );
             return false;
         }
 
         stageSpawnOrder.Clear();
-        AddPhaseEnemies(7, 2, 1); // PHASE 1
-        AddPhaseEnemies(4, 4, 2); // PHASE 2
-        AddPhaseEnemies(3, 3, 4); // PHASE 3
+
+        if (quickClearTestMode)
+        {
+            // テスト用：フグ1体のみ
+            stageSpawnOrder.Add(enemyPrefab);
+        }
+        else
+        {
+            // 通常モード：既存の敵構成を維持
+            AddPhaseEnemies(7, 2, 1); // PHASE 1
+            AddPhaseEnemies(4, 4, 2); // PHASE 2
+            AddPhaseEnemies(3, 3, 4); // PHASE 3
+        }
+
         return true;
     }
+
 
     private void AddPhaseEnemies(int pufferfish, int jellyfish, int crab)
     {
