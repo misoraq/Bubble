@@ -122,22 +122,20 @@ public class GameOverEffect : MonoBehaviour
         if (player == null)
             return;
 
-        // PlayerMove‚ð’âŽ~
-        PlayerMove playerMove =
-            player.GetComponent<PlayerMove>();
-
+        PlayerMove playerMove = player.GetComponent<PlayerMove>();
         if (playerMove != null)
-        {
-            playerMove.enabled = false;
-        }
+            playerMove.StopForStageEnd();
 
-        // Player‚ÌˆÚ“®‘¬“x‚ðŽ~‚ß‚é
-        Rigidbody2D rb =
-            player.GetComponent<Rigidbody2D>();
+        WaterGun[] guns = player.GetComponentsInChildren<WaterGun>(true);
+        foreach (WaterGun gun in guns)
+            gun.StopForStageEnd();
 
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
             rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.simulated = false;
         }
     }
 

@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,10 +9,9 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private GameObject jellyfishPrefab;
     [SerializeField] private GameObject crabPrefab;
 
-    [Header("Wave設定")]
-    [SerializeField] private int wavesPerPhase = 5;
-    [SerializeField] private int enemiesPerWave = 2;
+    [Header("ウェーブ間隔")]
     [SerializeField] private float nextWaveDelay = 2f;
+    [SerializeField] private float phaseChangeDelay = 3f;
     [SerializeField] private float spawnInterval = 0.5f;
 
     [Header("空中の敵の出現位置")]
@@ -30,87 +28,124 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private float warningDuration = 1f;
     [SerializeField] private float warningBlinkInterval = 0.15f;
     [SerializeField] private float warningEdgeMargin = 0.8f;
+
     [Header("重なり防止")]
     [SerializeField] private float minimumSpawnDistance = 2.5f;
     [SerializeField] private int positionSearchAttempts = 30;
 
+    [Header("フェーズ表示")]
+    [SerializeField] private PhaseAnnouncementUI phaseAnnouncement;
+
     [Header("クリア演出テスト")]
     [SerializeField] private bool quickClearTestMode = false;
 
-    private const int PhaseCount = 3;
-    private int totalWaves;
+    private class WaveData
+    {
+        public int phase;
+        public readonly List<GameObject> prefabs;
+
+        public WaveData(int phase, params GameObject[] prefabs)
+        {
+            this.phase = phase;
+            this.prefabs = new List<GameObject>(prefabs);
+        }
+    }
+
+    private readonly List<WaveData> waves = new List<WaveData>();
+    private readonly List<GameObject> currentEnemies = new List<GameObject>();
+    private readonly List<Vector3> reservedPositions = new List<Vector3>();
+
     private int currentWave;
-    private readonly List<GameObject> stageSpawnOrder = new List<GameObject>();
     private bool isSpawning;
     private bool waitingNextWave;
-
-    private readonly List<GameObject> currentEnemies =
-        new List<GameObject>();
-
-    private readonly List<Vector3> reservedPositions =
-        new List<Vector3>();
+    private bool initialized;
 
     public bool IsAllWavesCompleted
     {
         get
         {
-            return currentWave >= totalWaves &&
+            return initialized &&
+                   currentWave >= waves.Count &&
                    !isSpawning &&
                    !waitingNextWave &&
                    GetRemainingEnemyCount() == 0;
         }
     }
 
-
     private void Start()
     {
-        if (quickClearTestMode)
-        {
-            // テスト用：1Wave、敵1体だけ
-            wavesPerPhase = 1;
-            enemiesPerWave = 1;
-            totalWaves = 1;
-        }
-        else
-        {
-            // 通常モード：3フェーズ、各5Wave
-            wavesPerPhase = 5;
-            enemiesPerWave = 2;
-            totalWaves = PhaseCount * wavesPerPhase;
-        }
-
-        if (!BuildStageSpawnOrder())
+        if (!BuildWaves())
         {
             enabled = false;
             return;
         }
 
-        StageManager stageManager =
-            FindObjectOfType<StageManager>();
+        int totalEnemies = 0;
+        foreach (WaveData wave in waves)
+            totalEnemies += wave.prefabs.Count;
 
+        StageManager stageManager = FindObjectOfType<StageManager>();
         if (stageManager != null)
-        {
-            stageManager.SetTotalEnemies(
-                totalWaves * enemiesPerWave
-            );
-        }
+            stageManager.SetTotalEnemies(totalEnemies);
 
-        StartCoroutine(SpawnWaveRoutine());
+        initialized = true;
+        waitingNextWave = true; // PHASE 1表示中にUpdateが次のWaveを開始しないようにする
+        StartCoroutine(BeginStageRoutine());
     }
 
+    private IEnumerator BeginStageRoutine()
+    {
+        if (phaseAnnouncement != null)
+            yield return StartCoroutine(phaseAnnouncement.ShowPhase(1));
+
+        yield return StartCoroutine(SpawnWaveRoutine());
+        waitingNextWave = false;
+    }
 
     private void Update()
     {
-        if (isSpawning || waitingNextWave)
+        if (!initialized || isSpawning || waitingNextWave)
             return;
 
-        if (GetRemainingEnemyCount() > 0)
-            return;
-
-        if (currentWave >= totalWaves)
+        if (currentWave >= waves.Count || GetRemainingEnemyCount() > 0)
             return;
 
         StartCoroutine(NextWaveRoutine());
+    }
+
+    private bool BuildWaves()
+    {
+        if (enemyPrefab == null || jellyfishPrefab == null || crabPrefab == null)
+        {
+            Debug.LogError("EnemySpawner: 3種類の敵Prefabを設定してください。");
+            return false;
+        }
+
+        waves.Clear();
+
+        if (quickClearTestMode)
+        {
+            waves.Add(new WaveData(1, enemyPrefab));
+            return true;
+        }
+
+        // PHASE 1：フグ4・クラゲ2（6体）
+        waves.Add(new WaveData(1, enemyPrefab, enemyPrefab));
+        waves.Add(new WaveData(1, enemyPrefab, jellyfishPrefab));
+        waves.Add(new WaveData(1, enemyPrefab, jellyfishPrefab));
+
+        // PHASE 2：フグ3・クラゲ4・カニ3（10体）
+        waves.Add(new WaveData(2, enemyPrefab, jellyfishPrefab, crabPrefab));
+        waves.Add(new WaveData(2, jellyfishPrefab, jellyfishPrefab, crabPrefab));
+        waves.Add(new WaveData(2, enemyPrefab, jellyfishPrefab, crabPrefab, enemyPrefab));
+
+        // PHASE 3：フグ4・クラゲ4・カニ4（12体）
+        waves.Add(new WaveData(3, enemyPrefab, jellyfishPrefab, crabPrefab));
+        waves.Add(new WaveData(3, jellyfishPrefab, crabPrefab, enemyPrefab));
+        waves.Add(new WaveData(3, crabPrefab, enemyPrefab, jellyfishPrefab));
+        waves.Add(new WaveData(3, enemyPrefab, jellyfishPrefab, crabPrefab));
+
+        return true;
     }
 
     private int GetRemainingEnemyCount()
@@ -123,179 +158,107 @@ public class EnemySpawner : MonoBehaviour
     {
         waitingNextWave = true;
 
-        yield return new WaitForSeconds(nextWaveDelay);
+        int previousPhase = waves[currentWave - 1].phase;
+        int nextPhase = waves[currentWave].phase;
+        bool isPhaseChange = previousPhase != nextPhase;
 
-        StartCoroutine(SpawnWaveRoutine());
+        if (isPhaseChange)
+        {
+            Debug.Log("PHASE " + previousPhase + " CLEAR! → PHASE " + nextPhase);
+            if (phaseAnnouncement != null)
+                yield return StartCoroutine(phaseAnnouncement.ShowPhase(nextPhase));
+
+            yield return new WaitForSeconds(phaseChangeDelay);
+        }
+        else
+        {
+            yield return new WaitForSeconds(nextWaveDelay);
+        }
+
+        yield return StartCoroutine(SpawnWaveRoutine());
         waitingNextWave = false;
     }
 
     private IEnumerator SpawnWaveRoutine()
     {
         isSpawning = true;
-        currentWave++;
 
+        WaveData wave = waves[currentWave];
+        currentWave++;
         currentEnemies.Clear();
         reservedPositions.Clear();
 
-        Debug.Log(
-            "Wave " + currentWave + " / " + totalWaves
-        );
+        Debug.Log("PHASE " + wave.phase + " / 3  Wave " + currentWave + " / " + waves.Count);
 
-        int phase = (currentWave - 1) / wavesPerPhase + 1;
-        int waveInPhase = (currentWave - 1) % wavesPerPhase + 1;
-        Debug.Log("PHASE " + phase + " / 3  Wave " + waveInPhase + " / " + wavesPerPhase);
+        StageManager stageManager = FindObjectOfType<StageManager>();
 
-        int startIndex = (currentWave - 1) * enemiesPerWave;
-        List<GameObject> spawnOrder = stageSpawnOrder.GetRange(startIndex, enemiesPerWave);
-
-        StageManager stageManager =
-            FindObjectOfType<StageManager>();
-
-        foreach (GameObject prefab in spawnOrder)
+        foreach (GameObject prefab in wave.prefabs)
         {
             Vector3 spawnPosition;
-
-            // 安全な出現位置が見つかるまで待つ
-            while (!TryFindSpawnPosition(
-                prefab, out spawnPosition))
+            int retryCount = 0;
+            while (!TryFindSpawnPosition(prefab, out spawnPosition))
             {
+                retryCount++;
+                if (retryCount >= 20)
+                {
+                    // 同じウェーブで出現位置を確保できない場合も進行を止めない
+                    if (!TryFindFallbackPosition(prefab, out spawnPosition))
+                    {
+                        Debug.LogError("EnemySpawner: 出現位置を取得できません。Main Cameraを確認してください。");
+                        isSpawning = false;
+                        yield break;
+                    }
+                    Debug.LogWarning("EnemySpawner: 出現位置の距離制限を緩和してスポーンします。");
+                    break;
+                }
                 yield return new WaitForSeconds(0.25f);
             }
-            yield return StartCoroutine(
-    ShowWarning(spawnPosition)
-);
-            GameObject spawnedEnemy = Instantiate(
-                prefab,
-                spawnPosition,
-                Quaternion.identity
-            );
 
+            yield return StartCoroutine(ShowWarning(spawnPosition));
+
+            GameObject spawnedEnemy = Instantiate(prefab, spawnPosition, Quaternion.identity);
             currentEnemies.Add(spawnedEnemy);
             reservedPositions.Add(spawnPosition);
 
             if (stageManager != null)
                 stageManager.AddSpawnedEnemy();
 
-            yield return new WaitForSeconds(
-                spawnInterval
-            );
+            yield return new WaitForSeconds(spawnInterval);
         }
 
         isSpawning = false;
     }
 
-
-    private bool BuildStageSpawnOrder()
-    {
-        if (enemyPrefab == null ||
-            jellyfishPrefab == null ||
-            crabPrefab == null)
-        {
-            Debug.LogError(
-                "EnemySpawner: 敵Prefabが設定されていません。"
-            );
-            return false;
-        }
-
-        stageSpawnOrder.Clear();
-
-        if (quickClearTestMode)
-        {
-            // テスト用：フグ1体のみ
-            stageSpawnOrder.Add(enemyPrefab);
-        }
-        else
-        {
-            // 通常モード：既存の敵構成を維持
-            AddPhaseEnemies(7, 2, 1); // PHASE 1
-            AddPhaseEnemies(4, 4, 2); // PHASE 2
-            AddPhaseEnemies(3, 3, 4); // PHASE 3
-        }
-
-        return true;
-    }
-
-
-    private void AddPhaseEnemies(int pufferfish, int jellyfish, int crab)
-    {
-        List<GameObject> phaseEnemies = new List<GameObject>();
-        for (int i = 0; i < pufferfish; i++) phaseEnemies.Add(enemyPrefab);
-        for (int i = 0; i < jellyfish; i++) phaseEnemies.Add(jellyfishPrefab);
-        for (int i = 0; i < crab; i++) phaseEnemies.Add(crabPrefab);
-        Shuffle(phaseEnemies);
-        stageSpawnOrder.AddRange(phaseEnemies);
-    }
-
-    private void Shuffle(List<GameObject> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = Random.Range(0, i + 1);
-
-            GameObject temp = list[i];
-            list[i] = list[j];
-            list[j] = temp;
-        }
-    }
-
-    private bool TryFindSpawnPosition(
-        GameObject prefab,
-        out Vector3 position)
+    private bool TryFindSpawnPosition(GameObject prefab, out Vector3 position)
     {
         position = Vector3.zero;
-
         Camera cam = Camera.main;
-
         if (cam == null)
             return false;
 
-        float cameraDistance =
-            Mathf.Abs(cam.transform.position.z);
-
-        float left = cam.ViewportToWorldPoint(
-            new Vector3(0f, 0.5f, cameraDistance)
-        ).x;
-
-        float right = cam.ViewportToWorldPoint(
-            new Vector3(1f, 0.5f, cameraDistance)
-        ).x;
-
-        bool isCrab =
-            prefab.GetComponent<CrabAttack>() != null;
+        float cameraDistance = Mathf.Abs(cam.transform.position.z);
+        float left = cam.ViewportToWorldPoint(new Vector3(0f, 0.5f, cameraDistance)).x;
+        float right = cam.ViewportToWorldPoint(new Vector3(1f, 0.5f, cameraDistance)).x;
+        bool isCrab = prefab.GetComponent<CrabAttack>() != null;
 
         for (int i = 0; i < positionSearchAttempts; i++)
         {
             bool fromLeft = Random.value < 0.5f;
-
             float x;
             float y;
 
             if (isCrab)
             {
-                // カニは画面内の左右端付近
-                x = fromLeft
-                    ? left + crabEdgeMargin
-                    : right - crabEdgeMargin;
-
+                x = fromLeft ? left + crabEdgeMargin : right - crabEdgeMargin;
                 y = crabSpawnY;
             }
             else
             {
-                // 空中の敵は画面外から登場
-                x = fromLeft
-                    ? left - spawnOffsetX
-                    : right + spawnOffsetX;
-
-                y = Random.Range(
-                    minSpawnY,
-                    maxSpawnY
-                );
+                x = fromLeft ? left - spawnOffsetX : right + spawnOffsetX;
+                y = Random.Range(minSpawnY, maxSpawnY);
             }
 
-            Vector3 candidate = new Vector3(
-                x, y, 0f
-            );
-
+            Vector3 candidate = new Vector3(x, y, 0f);
             if (!IsPositionAvailable(candidate))
                 continue;
 
@@ -306,32 +269,38 @@ public class EnemySpawner : MonoBehaviour
         return false;
     }
 
+    private bool TryFindFallbackPosition(GameObject prefab, out Vector3 position)
+    {
+        position = Vector3.zero;
+        Camera cam = Camera.main;
+        if (cam == null) return false;
+
+        float distance = Mathf.Abs(cam.transform.position.z);
+        float left = cam.ViewportToWorldPoint(new Vector3(0f, 0.5f, distance)).x;
+        float right = cam.ViewportToWorldPoint(new Vector3(1f, 0.5f, distance)).x;
+        bool fromLeft = Random.value < 0.5f;
+        bool isCrab = prefab.GetComponent<CrabAttack>() != null;
+        float x = isCrab
+            ? (fromLeft ? left + crabEdgeMargin : right - crabEdgeMargin)
+            : (fromLeft ? left - spawnOffsetX : right + spawnOffsetX);
+        float y = isCrab ? crabSpawnY : Random.Range(minSpawnY, maxSpawnY);
+        position = new Vector3(x, y, 0f);
+        return true;
+    }
+
     private bool IsPositionAvailable(Vector3 position)
     {
-        // 今回のWaveで使用した位置
         foreach (Vector3 reserved in reservedPositions)
         {
-            if (Vector2.Distance(
-                position, reserved
-            ) < minimumSpawnDistance)
-            {
+            if (Vector2.Distance(position, reserved) < minimumSpawnDistance)
                 return false;
-            }
         }
 
-        // 現在生存している敵との距離
         foreach (GameObject enemy in currentEnemies)
         {
-            if (enemy == null)
-                continue;
-
-            if (Vector2.Distance(
-                position,
-                enemy.transform.position
-            ) < minimumSpawnDistance)
-            {
+            if (enemy != null &&
+                Vector2.Distance(position, enemy.transform.position) < minimumSpawnDistance)
                 return false;
-            }
         }
 
         return true;
@@ -343,75 +312,39 @@ public class EnemySpawner : MonoBehaviour
             yield break;
 
         Camera cam = Camera.main;
-
-        float distance = Mathf.Abs(
-            spawnPosition.z - cam.transform.position.z
-        );
-
-        float left = cam.ViewportToWorldPoint(
-            new Vector3(0f, 0.5f, distance)
-        ).x;
-
-        float right = cam.ViewportToWorldPoint(
-            new Vector3(1f, 0.5f, distance)
-        ).x;
-
+        float distance = Mathf.Abs(spawnPosition.z - cam.transform.position.z);
+        float left = cam.ViewportToWorldPoint(new Vector3(0f, 0.5f, distance)).x;
+        float right = cam.ViewportToWorldPoint(new Vector3(1f, 0.5f, distance)).x;
         float centerX = (left + right) * 0.5f;
-
-        // 敵が登場する側の画面端に表示
         float warningX = spawnPosition.x < centerX
             ? left + warningEdgeMargin
             : right - warningEdgeMargin;
 
-        Vector3 warningPosition = new Vector3(
-            warningX,
-            spawnPosition.y,
-            0f
-        );
+        Vector3 warningPosition = new Vector3(warningX, spawnPosition.y, 0f);
+        GameObject warning = Instantiate(warningPrefab, warningPosition, Quaternion.identity);
 
-        GameObject warning = Instantiate(
-            warningPrefab,
-            warningPosition,
-            Quaternion.identity
-        );
-        EnemyWarning warningController =
-    warning.GetComponent<EnemyWarning>();
-
+        EnemyWarning warningController = warning.GetComponent<EnemyWarning>();
         if (warningController != null)
-        {
-            warningController.SetTargetPosition(
-                spawnPosition
-            );
-        }
+            warningController.SetTargetPosition(spawnPosition);
 
-        SpriteRenderer[] renderers =
-     warning.GetComponentsInChildren<SpriteRenderer>();
-
+        SpriteRenderer[] renderers = warning.GetComponentsInChildren<SpriteRenderer>();
         float elapsed = 0f;
-
         bool isVisible = true;
+        float blinkInterval = Mathf.Max(0.01f, warningBlinkInterval);
 
         while (elapsed < warningDuration)
         {
             foreach (SpriteRenderer sr in renderers)
             {
                 if (sr != null)
-                {
                     sr.enabled = isVisible;
-                }
             }
 
             isVisible = !isVisible;
-
-            yield return new WaitForSeconds(
-                warningBlinkInterval
-            );
-
-            elapsed += warningBlinkInterval;
+            yield return new WaitForSeconds(blinkInterval);
+            elapsed += blinkInterval;
         }
 
         Destroy(warning);
-
     }
-
 }

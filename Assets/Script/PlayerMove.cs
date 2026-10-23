@@ -478,4 +478,32 @@ public class PlayerMove : MonoBehaviour
 
     }
 
+    // ステージクリア・ゲームオーバー時の共通停止処理
+    public void StopForStageEnd()
+    {
+        isDashing = false;
+        dashTimer = 0f;
+        bounceTimer = 0f;
+        crabStunTimer = 0f;
+        crabKnockbackTimer = 0f;
+
+        if (jetFlame != null)
+            jetFlame.SetActive(false);
+
+        if (animator != null)
+        {
+            animator.SetBool("IsWalking", false);
+            animator.Update(0f);
+        }
+
+        if (rb != null)
+        {
+            rb.gravityScale = normalGravityScale;
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
+
+        enabled = false;
+    }
+
 }

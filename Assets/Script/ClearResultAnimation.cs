@@ -1,73 +1,104 @@
-
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 public class ClearResultAnimation : MonoBehaviour
 {
-    [Header("STAGE CLEAR! ‰æ‘œ")]
+    [Header("STAGE CLEAR! ç”»åƒ")]
     [SerializeField] private RectTransform clearText;
 
-    [Header("“G‚ÌŒ‚”j”")]
+    [Header("æ•µã®æ’ƒç ´æ•°")]
     [SerializeField] private RectTransform pufferfishGroup;
     [SerializeField] private RectTransform jellyfishGroup;
     [SerializeField] private RectTransform crabGroup;
 
-    [Header("¯•]‰¿")]
+    [Header("æ˜Ÿè©•ä¾¡ï¼ˆæ—¢å­˜ã®è©•ä¾¡æ–‡å­—åˆ—ã‚’èª­ã¿å–ã‚‹ï¼‰")]
     [SerializeField] private TMP_Text starText;
 
-    [Header("ƒ^ƒCƒgƒ‹ƒ{ƒ^ƒ“")]
+    [Header("ç‹¬ç«‹ã—ãŸ3ã¤ã®æ˜ŸImageï¼ˆå·¦ã‹ã‚‰é †ã«ç™»éŒ²ï¼‰")]
+    [SerializeField] private Image[] starImages = new Image[3];
+
+    [Header("æ˜Ÿã®ã‚¹ãƒ—ãƒ©ã‚¤ãƒˆ")]
+    [SerializeField] private Sprite unlitStarSprite;
+    [SerializeField] private Sprite litStarSprite;
+
+    [Header("ã‚¿ã‚¤ãƒˆãƒ«ãƒœã‚¿ãƒ³")]
     [SerializeField] private GameObject returnTitleButton;
 
-    [Header("ƒ^ƒCƒgƒ‹‚Ì•‚ã‰‰o")]
+    [Header("ã‚¿ã‚¤ãƒˆãƒ«ã®æµ®ä¸Šæ¼”å‡º")]
     [SerializeField] private float titleDuration = 0.8f;
     [SerializeField] private float titleStartOffset = -100f;
 
-    [Header("‚»‚Ì‘¼‚Ì‰‰o")]
+    [Header("ãã®ä»–ã®æ¼”å‡º")]
     [SerializeField] private float popDuration = 0.25f;
     [SerializeField] private float interval = 0.2f;
     [SerializeField] private float starInterval = 0.25f;
 
+    [Header("æ˜ŸãŒé †ç•ªã«å…‰ã‚‹æ¼”å‡º")]
+    [SerializeField] private float starLightDuration = 0.35f;
+    [SerializeField] private float starPulseScale = 1.25f;
+
     private Coroutine animationCoroutine;
     private string savedStars = "";
-
     private Vector2 titleOriginalPosition;
+    private Vector3 titleOriginalScale = Vector3.one;
     private Image titleImage;
+    private Vector3[] starOriginalScales;
+
+    private bool initialized = false;
 
     private void Awake()
     {
+        InitializeIfNeeded();
+    }
+
+    // éã‚¢ã‚¯ãƒ†ã‚£ãƒ–ãªClearPanelã§ã‚‚PrepareAnimationã‹ã‚‰åˆæœŸåŒ–ã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹ã€‚
+    private void InitializeIfNeeded()
+    {
+        if (initialized) return;
+
         if (clearText != null)
         {
             titleOriginalPosition = clearText.anchoredPosition;
+            titleOriginalScale = clearText.localScale;
             titleImage = clearText.GetComponent<Image>();
         }
+
+        if (starImages == null)
+            starImages = new Image[0];
+
+        starOriginalScales = new Vector3[starImages.Length];
+        for (int i = 0; i < starImages.Length; i++)
+        {
+            starOriginalScales[i] = starImages[i] != null
+                ? starImages[i].rectTransform.localScale
+                : Vector3.one;
+        }
+
+        initialized = true;
     }
 
-    // –A‚ªŠ„‚ê‚é‘O‚ÉŒÄ‚Ño‚·
     public void PrepareAnimation()
     {
+        InitializeIfNeeded();
         if (animationCoroutine != null)
         {
             StopCoroutine(animationCoroutine);
             animationCoroutine = null;
         }
 
-        // STAGE CLEAR! ‚ğ‰B‚·
         if (clearText != null)
         {
-            clearText.localScale = Vector3.one * 0.7f;
-
-            clearText.anchoredPosition =
-                titleOriginalPosition +
-                new Vector2(0f, titleStartOffset);
+            clearText.localScale = titleOriginalScale * 0.7f;
+            clearText.anchoredPosition = titleOriginalPosition + new Vector2(0f, titleStartOffset);
         }
 
         if (titleImage != null)
         {
-            Color color = titleImage.color;
-            color.a = 0f;
-            titleImage.color = color;
+            Color c = titleImage.color;
+            c.a = 0f;
+            titleImage.color = c;
         }
 
         HideGroup(pufferfishGroup);
@@ -76,8 +107,23 @@ public class ClearResultAnimation : MonoBehaviour
 
         if (starText != null)
         {
-            savedStars = starText.text;
+            // æ—¢å­˜ã®æ˜Ÿè©•ä¾¡ã‚’ä¿æŒã€‚ç©ºæ–‡å­—ã®å ´åˆã¯å‰å›å€¤ã‚’ä¸Šæ›¸ãã—ãªã„ã€‚
+            if (!string.IsNullOrEmpty(starText.text))
+                savedStars = starText.text;
+
             starText.text = "";
+        }
+
+        for (int i = 0; i < starImages.Length; i++)
+        {
+            Image star = starImages[i];
+            if (star == null) continue;
+
+            star.gameObject.SetActive(true);
+            star.enabled = false;
+            star.sprite = unlitStarSprite;
+            star.color = Color.white;
+            star.rectTransform.localScale = starOriginalScales[i];
         }
 
         if (returnTitleButton != null)
@@ -86,6 +132,7 @@ public class ClearResultAnimation : MonoBehaviour
 
     public void PlayAnimation()
     {
+        InitializeIfNeeded();
         if (animationCoroutine != null)
             StopCoroutine(animationCoroutine);
 
@@ -94,12 +141,9 @@ public class ClearResultAnimation : MonoBehaviour
 
     private IEnumerator AnimationRoutine()
     {
-        // ‡@ STAGE CLEAR! ‚ª•‚‚©‚Ñã‚ª‚é
         yield return StartCoroutine(FloatTitle());
-
         yield return new WaitForSecondsRealtime(interval);
 
-        // ‡A “GƒAƒCƒRƒ“‚ª‡”Ô‚É“oê
         yield return StartCoroutine(Pop(pufferfishGroup));
         yield return new WaitForSecondsRealtime(interval);
 
@@ -109,95 +153,77 @@ public class ClearResultAnimation : MonoBehaviour
         yield return StartCoroutine(Pop(crabGroup));
         yield return new WaitForSecondsRealtime(interval);
 
-        // ‡B ¯•]‰¿
-        if (starText != null)
+        // 3ã¤ã®æ˜Ÿã‚’æœªç‚¹ç¯ã®ã‚¹ãƒ—ãƒ©ã‚¤ãƒˆã§è¡¨ç¤ºã™ã‚‹ã€‚
+        for (int i = 0; i < starImages.Length; i++)
         {
-            foreach (char star in savedStars)
-            {
-                starText.text += star;
+            if (starImages[i] == null) continue;
 
-                yield return new WaitForSecondsRealtime(
-                    starInterval
-                );
-            }
+            starImages[i].sprite = unlitStarSprite;
+            starImages[i].color = Color.white;
+            starImages[i].enabled = true;
+        }
+
+        int earned = CountEarnedStars(savedStars);
+        int count = Mathf.Min(earned, starImages.Length);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (starImages[i] != null)
+                yield return StartCoroutine(LightUpStar(i));
+
+            yield return new WaitForSecondsRealtime(starInterval);
         }
 
         yield return new WaitForSecondsRealtime(interval);
 
-        // ‡C ƒ^ƒCƒgƒ‹ƒ{ƒ^ƒ“
         if (returnTitleButton != null)
             returnTitleButton.SetActive(true);
 
         animationCoroutine = null;
     }
 
-    // STAGE CLEAR! ‚Ì•‚ãƒAƒjƒ[ƒVƒ‡ƒ“
     private IEnumerator FloatTitle()
     {
-        if (clearText == null)
-            yield break;
+        if (clearText == null) yield break;
 
-        Vector2 startPosition =
-            titleOriginalPosition +
-            new Vector2(0f, titleStartOffset);
+        Vector2 start = titleOriginalPosition + new Vector2(0f, titleStartOffset);
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, titleDuration);
 
-        float timer = 0f;
-
-        while (timer < titleDuration)
+        while (elapsed < duration)
         {
-            timer += Time.unscaledDeltaTime;
-
-            float t = Mathf.Clamp01(
-                timer / titleDuration
-            );
-
-            // ‚ä‚Á‚­‚èŒ¸‘¬‚µ‚È‚ª‚ç•‚ã
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
             float eased = 1f - Mathf.Pow(1f - t, 3f);
 
-            clearText.anchoredPosition = Vector2.Lerp(
-                startPosition,
-                titleOriginalPosition,
-                eased
-            );
+            clearText.anchoredPosition = Vector2.Lerp(start, titleOriginalPosition, eased);
+            clearText.localScale = titleOriginalScale *
+                Mathf.LerpUnclamped(0.7f, 1f, EaseOutBack(t));
 
-            // ¬‚³‚¢ó‘Ô‚©‚ç­‚µ‘å‚«‚­‚È‚é
-            float scale = Mathf.LerpUnclamped(
-                0.7f,
-                1f,
-                EaseOutBack(t)
-            );
-
-            clearText.localScale =
-                Vector3.one * scale;
-
-            // “§–¾‚©‚ç™X‚É•\¦
             if (titleImage != null)
             {
-                Color color = titleImage.color;
-                color.a = Mathf.SmoothStep(0f, 1f, t);
-                titleImage.color = color;
+                Color c = titleImage.color;
+                c.a = Mathf.SmoothStep(0f, 1f, t);
+                titleImage.color = c;
             }
 
             yield return null;
         }
 
-        clearText.anchoredPosition =
-            titleOriginalPosition;
-
-        clearText.localScale = Vector3.one;
+        clearText.anchoredPosition = titleOriginalPosition;
+        clearText.localScale = titleOriginalScale;
 
         if (titleImage != null)
         {
-            Color color = titleImage.color;
-            color.a = 1f;
-            titleImage.color = color;
+            Color c = titleImage.color;
+            c.a = 1f;
+            titleImage.color = c;
         }
     }
 
     private void HideGroup(RectTransform target)
     {
-        if (target == null)
-            return;
+        if (target == null) return;
 
         target.gameObject.SetActive(true);
         target.localScale = Vector3.zero;
@@ -205,37 +231,65 @@ public class ClearResultAnimation : MonoBehaviour
 
     private IEnumerator Pop(RectTransform target)
     {
-        if (target == null)
-            yield break;
+        if (target == null) yield break;
 
-        float timer = 0f;
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, popDuration);
 
-        while (timer < popDuration)
+        while (elapsed < duration)
         {
-            timer += Time.unscaledDeltaTime;
-
-            float t = Mathf.Clamp01(timer / popDuration);
-
-            float scale = Mathf.LerpUnclamped(
-                0f,
-                1f,
-                EaseOutBack(t)
-            );
-
-            target.localScale = Vector3.one * scale;
-
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            target.localScale = Vector3.one *
+                Mathf.LerpUnclamped(0f, 1f, EaseOutBack(t));
             yield return null;
         }
 
         target.localScale = Vector3.one;
     }
 
+    private IEnumerator LightUpStar(int index)
+    {
+        Image star = starImages[index];
+        RectTransform rect = star.rectTransform;
+        Vector3 baseScale = starOriginalScales[index];
+
+        // è‰²ã‚’å¤‰ãˆã‚‹ã®ã§ã¯ãªãã€é»„è‰²ã®æ˜Ÿã‚¹ãƒ—ãƒ©ã‚¤ãƒˆã¸åˆ‡ã‚Šæ›¿ãˆã‚‹ã€‚
+        star.sprite = litStarSprite;
+        star.color = Color.white;
+
+        float duration = Mathf.Max(0.01f, starLightDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float pulse = 1f + (starPulseScale - 1f) * Mathf.Sin(t * Mathf.PI);
+            rect.localScale = baseScale * pulse;
+            yield return null;
+        }
+
+        rect.localScale = baseScale;
+    }
+
+    private int CountEarnedStars(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return 0;
+
+        int count = 0;
+        foreach (char c in value)
+        {
+            if (c == 'â˜…' || c == 'â­') count++;
+        }
+
+        return Mathf.Clamp(count, 0, 3);
+    }
+
     private float EaseOutBack(float t)
     {
         const float c1 = 1.70158f;
         const float c3 = c1 + 1f;
-
-        return 1f + c3 * Mathf.Pow(t - 1f, 3f)
-                  + c1 * Mathf.Pow(t - 1f, 2f);
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
     }
 }

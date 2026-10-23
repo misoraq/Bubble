@@ -130,6 +130,24 @@ public class Bubble : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        // ボスの弱点と胴体を通常敵より先に判定する。
+        // 弱点は専用のTrigger Collider2Dを使用する。
+        GiantPufferWeakPoint weakPoint = other.GetComponent<GiantPufferWeakPoint>();
+        if (weakPoint != null)
+        {
+            weakPoint.TryHit();
+            Destroy(gameObject);
+            return;
+        }
+
+        GiantPufferBoss boss = other.GetComponentInParent<GiantPufferBoss>();
+        if (boss != null)
+        {
+            // 胴体は無敵。弾だけ消す。
+            Destroy(gameObject);
+            return;
+        }
+
         // 敵がチャージしている攻撃用の泡は無視
         EnemyBubble enemyBubble =
             other.GetComponentInParent<EnemyBubble>();

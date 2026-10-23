@@ -438,4 +438,25 @@ public class WaterGun : MonoBehaviour
         mustReleaseMouseAfterShock = true;
     }
 
+    // ステージクリア・ゲームオーバー時に発射とチャージを停止
+    public void StopForStageEnd()
+    {
+        isGameOver = true;
+        mustReleaseMouseAfterShock = true;
+        electricDisableTimer = 0f;
+        isWaterEmpty = false;
+
+        if (chargingBubble != null)
+            Destroy(chargingBubble);
+
+        chargingBubble = null;
+        chargingBubbleScript = null;
+
+        if (electricStunVisual != null)
+            electricStunVisual.EndStunVisual();
+
+        if (dangerFlash != null)
+            dangerFlash.StopFlash();
+    }
+
 }

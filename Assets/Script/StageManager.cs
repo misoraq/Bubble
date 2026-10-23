@@ -86,7 +86,7 @@ public class StageManager : MonoBehaviour
         Debug.Log("ステージクリア！");
         Debug.Log("最終撃破数 : " + defeatedEnemies);
 
-        
+
 
         int stars = 1;
 
@@ -253,7 +253,12 @@ public class StageManager : MonoBehaviour
             player.GetComponent<PlayerMove>();
 
         if (controller != null)
-            controller.enabled = false;
+            controller.StopForStageEnd();
+
+        // 銃はPlayerの子オブジェクトにあるため別途停止する
+        WaterGun[] guns = player.GetComponentsInChildren<WaterGun>(true);
+        foreach (WaterGun gun in guns)
+            gun.StopForStageEnd();
 
         // プレイヤーの物理演算を停止
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
