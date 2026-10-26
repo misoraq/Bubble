@@ -3050,6 +3050,7 @@ MonoBehaviour:
   dashSpeed: 13
   dashDuration: 0.3
   dashRange: 4
+  canUseBubbleDash: 0
   crabStunDuration: 1.2
   crabKnockbackSpeed: 4
   crabKnockbackTime: 0.15
@@ -3602,6 +3603,51 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -156.75}
   m_SizeDelta: {x: 200, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &896142521
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 896142523}
+  - component: {fileID: 896142522}
+  m_Layer: 0
+  m_Name: GameCursorController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &896142522
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 896142521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f838945715065a24384755b109828dc0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hideCursor: 1
+--- !u!4 &896142523
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 896142521}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.182214, y: -2.6942632, z: 0.06368585}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &919356415
 GameObject:
   m_ObjectHideFlags: 0
@@ -11108,13 +11154,13 @@ MonoBehaviour:
   enemyPrefab: {fileID: 5318474180066397397, guid: a1aa6d1d784430940ae1cb51f9810bf7, type: 3}
   jellyfishPrefab: {fileID: 6875976139977420738, guid: 42f249ff6c1b2c24cb54dc1d05ed1602, type: 3}
   crabPrefab: {fileID: 1453070986396956721, guid: 57b3c2ece82c96d4da70ab238e622cc1, type: 3}
-  nextWaveDelay: 2
+  nextWaveDelay: 1.3
   phaseChangeDelay: 3
-  spawnInterval: 0.5
+  spawnInterval: 0.2
   spawnOffsetX: 1
   minSpawnY: -3
   maxSpawnY: 3
-  crabSpawnY: -4.25
+  crabSpawnY: -3.35
   crabEdgeMargin: 1
   warningPrefab: {fileID: 8024609266922838090, guid: f84fede2d818c9d4bbd1c415d022f503, type: 3}
   warningDuration: 1
@@ -11483,3 +11529,4 @@ SceneRoots:
   - {fileID: 1825670390}
   - {fileID: 4654332478345001983}
   - {fileID: 1829809515}
+  - {fileID: 896142523}

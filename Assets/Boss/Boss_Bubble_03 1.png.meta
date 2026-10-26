@@ -140,7 +140,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Boss_Bubble_03 1_0: -1048704196806522008
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

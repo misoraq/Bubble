@@ -140,7 +140,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Boss_Tired_06 1_0: 6788453413382857023
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

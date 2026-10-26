@@ -159,7 +159,7 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        if (player != null && !isBubbled)
+        if (player != null && !isBubbled && IsVisibleOnScreen())
         {
             attackTimer -= Time.deltaTime;
 
@@ -211,6 +211,11 @@ public class Enemy : MonoBehaviour
 
     public void HitByBubble(bool isFullCharge)
     {
+        // 画面外および画面に入ってからの無敵時間中は泡攻撃を無効化
+        EnemySpawnProtection protection = GetComponent<EnemySpawnProtection>();
+        if (protection != null && protection.IsProtected)
+            return;
+
         if (isBubbled || isGameOverStopped || isSpawning)
             return;
 
@@ -443,6 +448,28 @@ public class Enemy : MonoBehaviour
             normalScale
         );
     }
+    // 敵の見た目が画面に入るまで攻撃タイマーを進めない
+    private bool IsVisibleOnScreen()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+            return false;
+
+        Bounds bounds = spriteRenderer != null
+            ? spriteRenderer.bounds
+            : new Bounds(transform.position, Vector3.zero);
+
+        Vector3 min = cam.WorldToViewportPoint(bounds.min);
+        Vector3 max = cam.WorldToViewportPoint(bounds.max);
+
+        if (min.z <= 0f || max.z <= 0f)
+            return false;
+
+        // フグのSprite全体が画面内に収まってから攻撃を許可する
+        return min.x >= 0f && max.x <= 1f &&
+               min.y >= 0f && max.y <= 1f;
+    }
+
     private void ShootEnemyBubble()
     {
         if (enemyBubblePrefab == null || attackMuzzle == null || player == null)

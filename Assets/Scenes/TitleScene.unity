@@ -3175,7 +3175,7 @@ MonoBehaviour:
   pufferProgressText: {fileID: 681122393}
   jellyfishProgressText: {fileID: 940125418}
   crabProgressText: {fileID: 717595259}
-  testLockedSkins: 1
+  testLockedSkins: 0
 --- !u!1 &1058689141
 GameObject:
   m_ObjectHideFlags: 0

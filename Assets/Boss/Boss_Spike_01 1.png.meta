@@ -140,7 +140,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Boss_Spike_01 1_0: -4113207062588774296
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -55,6 +55,13 @@ public class WaterGun : MonoBehaviour
 
     private void Update()
     {
+        if (PhaseAnnouncementUI.IsPlaying)
+        {
+            CancelChargingForPhase();
+            mustReleaseMouseAfterShock = true;
+            return;
+        }
+
         if (isGameOver)
         {
             return;
@@ -117,6 +124,15 @@ public class WaterGun : MonoBehaviour
     }
 
     // e‚Æè‚ğˆê‚É‰ñ“]
+    private void CancelChargingForPhase()
+    {
+        if (chargingBubble != null)
+            Destroy(chargingBubble);
+
+        chargingBubble = null;
+        chargingBubbleScript = null;
+    }
+
     private void UpdateGunRotation()
     {
         if (gunPivot == null)

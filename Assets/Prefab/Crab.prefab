@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 3618710987582923927}
   - component: {fileID: 926008089517994453}
   - component: {fileID: 1367830728598348513}
+  - component: {fileID: -302964190995588190}
   m_Layer: 0
   m_Name: Crab
   m_TagString: Untagged
@@ -246,6 +247,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bubblePopPrefab: {fileID: 5225794796792677130, guid: a6ccfc8e7783169488390d69ee4d024f, type: 3}
   offset: {x: 0, y: 0, z: 0}
+--- !u!114 &-302964190995588190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453070986396956721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd92cdc7ccb0dbb479396f064e6d5119, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  protectionDuration: 1
+  screenMargin: 0
 --- !u!1001 &32550057725619505
 PrefabInstance:
   m_ObjectHideFlags: 0

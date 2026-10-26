@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
@@ -21,11 +22,18 @@ public class PlayerMove : MonoBehaviour
     [SerializeField] private float dashDuration = 0.25f;
     [SerializeField] private float dashRange = 3f;
 
+    [Header("ダッシュ能力")]
+    [SerializeField] private bool canUseBubbleDash = false;
 
     [Header("カニの突進による行動不能")]
     [SerializeField] private float crabStunDuration = 1.2f;
     [SerializeField] private float crabKnockbackSpeed = 4f;
     [SerializeField] private float crabKnockbackTime = 0.15f;
+
+    [Header("画面端")]
+    [SerializeField] private float screenMargin = 0.5f;
+
+    private Rigidbody2D rb;
 
     private float crabStunTimer;
     private float crabKnockbackTimer;
@@ -33,15 +41,10 @@ public class PlayerMove : MonoBehaviour
 
     public bool IsCrabStunned => crabStunTimer > 0f;
 
-    [Header("画面端")]
-    [SerializeField] private float screenMargin = 0.5f;
-
-    private Rigidbody2D rb;
-
     private bool isDashing = false;
     private float dashTimer = 0f;
     private float bounceTimer = 0f;
-    // ダッシュする方向
+
     private Vector2 dashDirection;
 
     private float normalGravityScale;
@@ -53,9 +56,16 @@ public class PlayerMove : MonoBehaviour
         normalGravityScale = rb.gravityScale;
     }
 
-
     private void Update()
     {
+        // フェーズ演出中は操作禁止
+        if (PhaseAnnouncementUI.IsPlaying)
+        {
+            StopInputDuringPhase();
+            return;
+        }
+
+        // カニの突進を受けた場合
         if (crabStunTimer > 0f)
         {
             crabStunTimer -= Time.deltaTime;
@@ -82,10 +92,14 @@ public class PlayerMove : MonoBehaviour
         UpdateDashUI();
     }
 
-
-
     private void FixedUpdate()
     {
+        if (PhaseAnnouncementUI.IsPlaying)
+        {
+            rb.velocity = new Vector2(0f, rb.velocity.y);
+            return;
+        }
+
         if (IsCrabStunned)
         {
             if (crabKnockbackTimer > 0f)
@@ -109,18 +123,41 @@ public class PlayerMove : MonoBehaviour
         }
     }
 
+    private void StopInputDuringPhase()
+    {
+        if (isDashing)
+            EndDash();
+
+        bounceTimer = 0f;
+
+        rb.velocity = new Vector2(
+            0f,
+            rb.velocity.y
+        );
+
+        if (jetFlame != null)
+            jetFlame.SetActive(false);
+
+        if (animator != null)
+            animator.SetBool("IsWalking", false);
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        Debug.Log("衝突した相手 : " + collision.gameObject.name);
+        if (PhaseAnnouncementUI.IsPlaying)
+            return;
+
+        Debug.Log(
+            "衝突した相手 : " + collision.gameObject.name
+        );
+
         Enemy enemy = collision.gameObject.GetComponent<Enemy>();
 
         if (enemy == null)
-        {
             return;
-        }
 
-        // ダッシュ中
-        if (isDashing)
+        // ダッシュ中に敵へ接触
+        if (isDashing && canUseBubbleDash)
         {
             if (enemy.IsBubbled)
             {
@@ -137,25 +174,24 @@ public class PlayerMove : MonoBehaviour
             return;
         }
 
-        // EnemyからPlayerへ向かう方向
+        // 通常時の敵との衝突
         Vector2 direction =
             (transform.position - enemy.transform.position).normalized;
 
         float bouncePower = 3f;
 
-        // 横から当たった場合
+        // 横方向から接触
         if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
         {
             bounceTimer = 0.15f;
 
-            // Playerを反発
             rb.velocity = new Vector2(
                 Mathf.Sign(direction.x) * 2f,
                 rb.velocity.y
             );
 
-            // Enemyも少し反発
-            Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
+            Rigidbody2D enemyRb =
+                enemy.GetComponent<Rigidbody2D>();
 
             if (enemyRb != null)
             {
@@ -165,7 +201,7 @@ public class PlayerMove : MonoBehaviour
                 );
             }
         }
-        // 上下から当たった場合
+        // 上下方向から接触
         else
         {
             rb.velocity = new Vector2(
@@ -174,21 +210,22 @@ public class PlayerMove : MonoBehaviour
             );
         }
     }
+
     private void Move()
     {
-        // ダッシュ中は通常移動しない
         if (isDashing)
-        {
             return;
-        }
+
         if (bounceTimer > 0f)
         {
             bounceTimer -= Time.deltaTime;
             return;
         }
-        float horizontal = Input.GetAxisRaw("Horizontal");
 
-        // 地上
+        float horizontal =
+            Input.GetAxisRaw("Horizontal");
+
+        // 地上移動
         if (IsGrounded())
         {
             rb.velocity = new Vector2(
@@ -196,10 +233,11 @@ public class PlayerMove : MonoBehaviour
                 rb.velocity.y
             );
         }
-        // 空中
+        // 空中移動
         else
         {
-            float targetSpeed = horizontal * moveSpeed;
+            float targetSpeed =
+                horizontal * moveSpeed;
 
             float newSpeed = Mathf.MoveTowards(
                 rb.velocity.x,
@@ -213,13 +251,13 @@ public class PlayerMove : MonoBehaviour
             );
         }
 
-        // 向き
-        if (horizontal < 0)
+        // プレイヤーの向き
+        if (horizontal < 0f)
         {
             transform.rotation =
                 Quaternion.Euler(0f, 0f, 0f);
         }
-        else if (horizontal > 0)
+        else if (horizontal > 0f)
         {
             transform.rotation =
                 Quaternion.Euler(0f, 180f, 0f);
@@ -228,13 +266,10 @@ public class PlayerMove : MonoBehaviour
 
     private void Jump()
     {
-        // ダッシュ中はジェットパックを使わない
         if (isDashing)
         {
             if (jetFlame != null)
-            {
                 jetFlame.SetActive(false);
-            }
 
             return;
         }
@@ -243,27 +278,34 @@ public class PlayerMove : MonoBehaviour
         {
             if (rb.velocity.y < jetpackMaxSpeed)
             {
-                rb.AddForce(Vector2.up * jetpackForce);
+                rb.AddForce(
+                    Vector2.up * jetpackForce
+                );
             }
 
             if (jetFlame != null)
-            {
                 jetFlame.SetActive(true);
-            }
         }
         else
         {
             if (jetFlame != null)
-            {
                 jetFlame.SetActive(false);
-            }
         }
     }
 
     private void Dash()
     {
-        // Shiftを押したらダッシュ開始
-        if (Input.GetKeyDown(KeyCode.LeftShift) && !isDashing)
+        // ダッシュ能力が無効の場合は使用不可
+        if (!canUseBubbleDash)
+        {
+            if (isDashing)
+                EndDash();
+
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.LeftShift)
+            && !isDashing)
         {
             StartDash();
         }
@@ -273,40 +315,40 @@ public class PlayerMove : MonoBehaviour
             dashTimer -= Time.deltaTime;
 
             if (dashTimer <= 0f)
-            {
                 EndDash();
-            }
         }
     }
 
     private void StartDash()
     {
-        // 近くの泡状態の敵を探す
-        Enemy targetEnemy = FindNearestBubbledEnemy();
+        if (!canUseBubbleDash)
+            return;
 
-        // 泡状態の敵がいなければダッシュしない
+        Enemy targetEnemy =
+            FindNearestBubbledEnemy();
+
         if (targetEnemy == null)
         {
-            Debug.Log("近くに泡状態の敵がいません");
+            Debug.Log(
+                "近くに泡状態の敵がいません"
+            );
             return;
         }
 
-        // ダッシュ開始
         isDashing = true;
-
         dashTimer = dashDuration;
 
-        // 敵の方向を計算
         Vector2 direction =
-            targetEnemy.transform.position - transform.position;
+            targetEnemy.transform.position -
+            transform.position;
 
         dashDirection = direction.normalized;
 
-        // 重力OFF
+        // ダッシュ中は重力を無効化
         rb.gravityScale = 0f;
 
-        // 敵の方向へダッシュ
-        rb.velocity = dashDirection * dashSpeed;
+        rb.velocity =
+            dashDirection * dashSpeed;
 
         Debug.Log(
             "ダッシュ開始！ ターゲット: " +
@@ -317,11 +359,11 @@ public class PlayerMove : MonoBehaviour
     private void EndDash()
     {
         isDashing = false;
+        dashTimer = 0f;
 
-        // 重力を元に戻す
-        rb.gravityScale = normalGravityScale;
+        rb.gravityScale =
+            normalGravityScale;
 
-        // 横方向の速度を止める
         rb.velocity = new Vector2(
             0f,
             rb.velocity.y
@@ -330,27 +372,24 @@ public class PlayerMove : MonoBehaviour
 
     private Enemy FindNearestBubbledEnemy()
     {
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        Enemy[] enemies =
+            FindObjectsOfType<Enemy>();
 
         Enemy nearestEnemy = null;
 
-        float nearestDistance = dashRange;
+        float nearestDistance =
+            dashRange;
 
         foreach (Enemy enemy in enemies)
         {
-            // 泡状態じゃない敵は対象外
             if (!enemy.IsBubbled)
-            {
                 continue;
-            }
 
-            float distance =
-                Vector2.Distance(
-                    transform.position,
-                    enemy.transform.position
-                );
+            float distance = Vector2.Distance(
+                transform.position,
+                enemy.transform.position
+            );
 
-            // ダッシュ範囲内で一番近い敵
             if (distance <= nearestDistance)
             {
                 nearestDistance = distance;
@@ -372,10 +411,11 @@ public class PlayerMove : MonoBehaviour
 
     private void UpdateAnimation()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
+        float horizontal =
+            Input.GetAxisRaw("Horizontal");
 
         bool isWalking =
-            horizontal != 0 && !isDashing;
+            horizontal != 0f && !isDashing;
 
         if (animator != null)
         {
@@ -388,12 +428,15 @@ public class PlayerMove : MonoBehaviour
 
     private void LimitToScreen()
     {
+        if (Camera.main == null)
+            return;
+
         Vector3 viewPos =
             Camera.main.WorldToViewportPoint(
                 transform.position
             );
 
-        // 左右：画面外に出たら反対側へ
+        // 左右の画面端を超えると反対側へ
         if (viewPos.x < 0f)
         {
             viewPos.x = 1f;
@@ -403,7 +446,7 @@ public class PlayerMove : MonoBehaviour
             viewPos.x = 0f;
         }
 
-        // 上：画面外に出ない
+        // 画面上端より上へ出られないようにする
         if (viewPos.y > 1f)
         {
             viewPos.y = 1f;
@@ -425,60 +468,69 @@ public class PlayerMove : MonoBehaviour
 
     private void UpdateDashUI()
     {
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        Enemy[] enemies =
+            FindObjectsOfType<Enemy>();
 
         foreach (Enemy enemy in enemies)
         {
-            if (!enemy.IsBubbled)
+            if (enemy == null || !enemy.IsBubbled)
+                continue;
+
+            // ダッシュ能力が無効なら案内UIも非表示
+            if (!canUseBubbleDash)
             {
+                enemy.ShowDashUI(false);
                 continue;
             }
 
-            float distance =
-                Vector2.Distance(
-                    transform.position,
-                    enemy.transform.position
-                );
+            float distance = Vector2.Distance(
+                transform.position,
+                enemy.transform.position
+            );
 
-            if (distance <= dashRange)
-            {
-                enemy.ShowDashUI(true);
-            }
-            else
-            {
-                enemy.ShowDashUI(false);
-            }
+            enemy.ShowDashUI(
+                distance <= dashRange
+            );
         }
     }
 
     public void HitByCrabCharge(Vector2 direction)
     {
-        crabStunTimer = crabStunDuration;
-        crabKnockbackTimer = crabKnockbackTime;
-        crabKnockbackDirection =
-            direction.x >= 0f ? Vector2.right : Vector2.left;
+        if (PhaseAnnouncementUI.IsPlaying)
+            return;
 
-        // ダッシュを中断
+        crabStunTimer =
+            crabStunDuration;
+
+        crabKnockbackTimer =
+            crabKnockbackTime;
+
+        crabKnockbackDirection =
+            direction.x >= 0f
+                ? Vector2.right
+                : Vector2.left;
+
         if (isDashing)
             EndDash();
 
         bounceTimer = 0f;
 
         rb.velocity = new Vector2(
-            crabKnockbackDirection.x * crabKnockbackSpeed,
+            crabKnockbackDirection.x *
+            crabKnockbackSpeed,
             rb.velocity.y
         );
 
-        WaterGun waterGun = GetComponentInChildren<WaterGun>();
+        WaterGun waterGun =
+            GetComponentInChildren<WaterGun>();
 
         if (waterGun != null)
         {
             waterGun.CancelChargingByCrab();
         }
-
     }
 
-    // ステージクリア・ゲームオーバー時の共通停止処理
+    // ステージクリア・ゲームオーバー時の停止
     public void StopForStageEnd()
     {
         isDashing = false;
@@ -490,12 +542,6 @@ public class PlayerMove : MonoBehaviour
         if (jetFlame != null)
             jetFlame.SetActive(false);
 
-        if (animator != null)
-        {
-            animator.SetBool("IsWalking", false);
-            animator.Update(0f);
-        }
-
         if (rb != null)
         {
             rb.gravityScale = normalGravityScale;
@@ -503,7 +549,23 @@ public class PlayerMove : MonoBehaviour
             rb.angularVelocity = 0f;
         }
 
+        // 現在のアニメーションのフレームで停止
+        if (animator != null)
+        {
+            animator.speed = 0f;
+        }
+
         enabled = false;
     }
 
+    // アイテム取得時などにダッシュ能力を切り替える
+    public void SetBubbleDashEnabled(bool enabled)
+    {
+        canUseBubbleDash = enabled;
+
+        if (!canUseBubbleDash && isDashing)
+            EndDash();
+
+        UpdateDashUI();
+    }
 }

@@ -9,6 +9,8 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CanvasGroup))]
 public class PhaseAnnouncementUI : MonoBehaviour
 {
+    public static bool IsPlaying { get; private set; }
+
     [Header("äÓñ{UI")]
     [SerializeField] private TMP_Text phaseText;
     [SerializeField] private TMP_Text subtitleText;
@@ -84,13 +86,20 @@ public class PhaseAnnouncementUI : MonoBehaviour
         ResetVisuals();
     }
 
+    private void OnDisable()
+    {
+        IsPlaying = false;
+    }
+
     public IEnumerator ShowPhase(int phase)
     {
+        IsPlaying = true;
         if (phaseText == null)
         {
             Debug.LogWarning(
                 "PhaseAnnouncementUI: Phase Text Ç™ñ¢ê›íËÇ≈Ç∑ÅB");
 
+            IsPlaying = false;
             yield break;
         }
 
@@ -109,6 +118,7 @@ public class PhaseAnnouncementUI : MonoBehaviour
         yield return FadeOut();
 
         ResetVisuals();
+        IsPlaying = false;
     }
 
     private void SetupPhase(int phase)

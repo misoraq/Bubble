@@ -260,7 +260,13 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      hugu 1_0: 8600699227764799428
+      hugu 1_1: -2862098810910904875
+      hugu 1_2: 6259108410521984336
+      hugu 1_3: -4052921165022188133
+      hugu 1_4: 8505498965369234008
+      hugu 1_5: -2195992977029094407
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

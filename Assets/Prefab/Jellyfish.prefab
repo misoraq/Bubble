@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 6721619234061944155}
   - component: {fileID: 4858538842176045586}
   - component: {fileID: -2095480035960059325}
+  - component: {fileID: 5246344607887853519}
   m_Layer: 0
   m_Name: Jellyfish
   m_TagString: Untagged
@@ -83,7 +84,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 4
   m_Sprite: {fileID: -2480877810507915742, guid: 5cc138fbbdfca8b479aec44ed5014618, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -267,6 +268,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bubblePopPrefab: {fileID: 5225794796792677130, guid: a6ccfc8e7783169488390d69ee4d024f, type: 3}
   offset: {x: 0, y: 0, z: 0}
+--- !u!114 &5246344607887853519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6875976139977420738}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd92cdc7ccb0dbb479396f064e6d5119, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  protectionDuration: 1
+  screenMargin: 0
 --- !u!1 &7978564187298805182
 GameObject:
   m_ObjectHideFlags: 0

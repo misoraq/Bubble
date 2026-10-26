@@ -31,6 +31,11 @@ public class CrabBubbleHit : MonoBehaviour
 
     public void HitByBubble(bool isFullCharge)
     {
+        // ‰æ–ÊŠO‚¨‚æ‚Ñ‰æ–Ê‚É“ü‚Á‚Ä‚©‚ç‚Ì–³“GŠÔ’†‚Í–AUŒ‚‚ğ–³Œø‰»
+        EnemySpawnProtection protection = GetComponent<EnemySpawnProtection>();
+        if (protection != null && protection.IsProtected)
+            return;
+
         if (IsBubbled)
             return;
 

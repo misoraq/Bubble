@@ -140,7 +140,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Boss_Wave_05 1_0: -4293116006547534723
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
