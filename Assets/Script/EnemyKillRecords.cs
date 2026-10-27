@@ -24,6 +24,14 @@ public static class EnemyKillRecords
         Debug.Log("Cumulative " + enemyType + " kills: " + total);
     }
 
+    // スキンの初期化時に使用する。その他のPlayerPrefsは消さない。
+    public static void ResetAllKills()
+    {
+        PlayerPrefs.DeleteKey(Prefix + "Pufferfish");
+        PlayerPrefs.DeleteKey(Prefix + "Jellyfish");
+        PlayerPrefs.DeleteKey(Prefix + "Crab");
+    }
+
     private static bool IsSupportedType(string enemyType)
     {
         return enemyType == "Pufferfish" ||

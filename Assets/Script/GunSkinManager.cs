@@ -14,15 +14,19 @@ public class GunSkinManager : MonoBehaviour
     public const int PufferGun = 3;
     public const int JellyfishGun = 4;
     public const int CrabGun = 5;
-    [ContextMenu("テスト用：スキン解放リセット")]
+    // 開発中の保存データを手動で初期状態に戻す。
+    // 通常起動時には呼び出さないため、プレイヤーの進行状況は維持される。
+    [ContextMenu("テスト用：スキン解放・撃破記録をすべてリセット")]
     private void ResetSkinUnlockTest()
     {
-        PlayerPrefs.SetInt("BestClearStars", 0);
-        PlayerPrefs.SetInt("EquippedGunSkin", 0);
+        PlayerPrefs.SetInt(BestStarsKey, 0);
+        PlayerPrefs.SetInt(EquippedSkinKey, NormalGun);
+        EnemyKillRecords.ResetAllKills();
         PlayerPrefs.Save();
 
-        Debug.Log("スキン解放データをリセットしました");
+        Debug.Log("スキン解放・装備・累計撃破記録を初期化しました。NORMAL GUNのみ解放済みです。");
     }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -65,10 +69,10 @@ public class GunSkinManager : MonoBehaviour
                 return GetBestStars() >= 2;
 
             case BowGun:
-                return GetBestStars() >= 3;
+                return EnemyKillRecords.GetKills("Pufferfish") >= 20;
 
             case PufferGun:
-                return EnemyKillRecords.GetKills("Pufferfish") >= 20;
+                return GetBestStars() >= 3;
 
             case JellyfishGun:
                 return EnemyKillRecords.GetKills("Jellyfish") >= 20;

@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class JellyfishElectricBullet : MonoBehaviour
@@ -7,7 +6,11 @@ public class JellyfishElectricBullet : MonoBehaviour
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float lifeTime = 5f;
 
+    [Header("電撃ヒット時の水ダメージ")]
+    [SerializeField] private int waterDamage = 2;
+
     private Vector2 moveDirection = Vector2.left;
+    private bool hasHitPlayer = false;
 
     private void Start()
     {
@@ -32,6 +35,7 @@ public class JellyfishElectricBullet : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (hasHitPlayer) return;
         Debug.Log("電撃が接触：" + other.gameObject.name);
 
         // Playerタグが付いているオブジェクトを探す
@@ -55,7 +59,12 @@ public class JellyfishElectricBullet : MonoBehaviour
         {
             Debug.Log("感電成功！水鉄砲を3秒間停止");
 
+            hasHitPlayer = true;
             waterGun.DisableShootingByElectricity();
+
+            // 電撃による水の減少（1発につき1回のみ）
+            if (waterDamage > 0)
+                waterGun.TakeDamage(waterDamage);
 
             Destroy(gameObject);
         }

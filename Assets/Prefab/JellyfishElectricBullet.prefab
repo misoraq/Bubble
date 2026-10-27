@@ -165,6 +165,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 5
   lifeTime: 5
+  waterDamage: 1
 --- !u!95 &8973300535042941512
 Animator:
   serializedVersion: 7

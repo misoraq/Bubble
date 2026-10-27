@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerMove : MonoBehaviour
 {
@@ -16,6 +17,20 @@ public class PlayerMove : MonoBehaviour
     [SerializeField] private GameObject jetFlame;
     [SerializeField] private float jetpackForce = 8f;
     [SerializeField] private float jetpackMaxSpeed = 5f;
+
+    [Header("ジェットパック燃料")]
+    [SerializeField] private float maxFuel = 5f;
+    [SerializeField] private float fuelConsumptionPerSecond = 1f;
+    [SerializeField] private float fuelRecoveryPerSecond = 1.5f;
+    [SerializeField] private float fuelRecoveryDelay = 0.75f;
+    [SerializeField] private Slider fuelGauge;
+
+    private float currentFuel;
+    private float fuelRecoveryTimer;
+
+    public float CurrentFuel => currentFuel;
+    public float MaxFuel => maxFuel;
+    public float FuelRatio => maxFuel > 0f ? currentFuel / maxFuel : 0f;
 
     [Header("ダッシュ")]
     [SerializeField] private float dashSpeed = 15f;
@@ -49,11 +64,22 @@ public class PlayerMove : MonoBehaviour
 
     private float normalGravityScale;
 
+    private void OnValidate()
+    {
+        maxFuel = Mathf.Max(0f, maxFuel);
+        fuelConsumptionPerSecond = Mathf.Max(0f, fuelConsumptionPerSecond);
+        fuelRecoveryPerSecond = Mathf.Max(0f, fuelRecoveryPerSecond);
+        fuelRecoveryDelay = Mathf.Max(0f, fuelRecoveryDelay);
+    }
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
 
         normalGravityScale = rb.gravityScale;
+        maxFuel = Mathf.Max(0f, maxFuel);
+        currentFuel = maxFuel;
+        UpdateFuelGauge();
     }
 
     private void Update()
@@ -79,6 +105,7 @@ public class PlayerMove : MonoBehaviour
             if (animator != null)
                 animator.SetBool("IsWalking", false);
 
+            UpdateFuelRecovery();
             LimitToScreen();
             UpdateDashUI();
             return;
@@ -87,6 +114,10 @@ public class PlayerMove : MonoBehaviour
         Move();
         Jump();
         Dash();
+
+        // 燃料の自動回復処理
+        UpdateFuelRecovery();
+
         UpdateAnimation();
         LimitToScreen();
         UpdateDashUI();
@@ -274,23 +305,68 @@ public class PlayerMove : MonoBehaviour
             return;
         }
 
-        if (Input.GetKey(KeyCode.Space))
+        bool wantsJetpack = Input.GetKey(KeyCode.Space);
+        bool canJetpack = wantsJetpack && currentFuel > 0f;
+
+        if (canJetpack)
         {
             if (rb.velocity.y < jetpackMaxSpeed)
             {
-                rb.AddForce(
-                    Vector2.up * jetpackForce
-                );
+                rb.AddForce(Vector2.up * jetpackForce);
             }
 
-            if (jetFlame != null)
-                jetFlame.SetActive(true);
+            float consumed =
+                fuelConsumptionPerSecond * Time.deltaTime;
+
+            currentFuel = Mathf.Max(
+                0f,
+                currentFuel - consumed
+            );
+
+            fuelRecoveryTimer = fuelRecoveryDelay;
         }
-        else
+
+        if (jetFlame != null)
         {
-            if (jetFlame != null)
-                jetFlame.SetActive(false);
+            jetFlame.SetActive(
+                canJetpack && currentFuel > 0f
+            );
         }
+
+        UpdateFuelGauge();
+    }
+
+    private void UpdateFuelRecovery()
+    {
+        // Spaceキーを離しているときだけ燃料を回復
+        if (Input.GetKey(KeyCode.Space) || isDashing)
+            return;
+
+        // 回復開始までの待機時間
+        if (fuelRecoveryTimer > 0f)
+        {
+            fuelRecoveryTimer -= Time.deltaTime;
+            return;
+        }
+
+        // 燃料を徐々に回復
+        currentFuel = Mathf.Min(
+            maxFuel,
+            currentFuel +
+            fuelRecoveryPerSecond * Time.deltaTime
+        );
+
+        UpdateFuelGauge();
+    }
+
+    private void UpdateFuelGauge()
+    {
+        if (fuelGauge == null)
+            return;
+
+        fuelGauge.minValue = 0f;
+        fuelGauge.maxValue = Mathf.Max(0.001f, maxFuel);
+        fuelGauge.value = currentFuel;
     }
 
     private void Dash()

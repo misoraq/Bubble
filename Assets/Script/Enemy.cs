@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections;
 
@@ -13,11 +14,11 @@ public class Enemy : MonoBehaviour
     [Header("泡の制限時間")]
     [SerializeField] private float smallBubbleTime = 3f;
     [SerializeField] private float fullChargeBubbleTime = 7f;
-
     [SerializeField] private float floatSpeed = 1.5f;
 
     [Header("小さい泡")]
     [SerializeField] private int requiredHits = 3;
+
     [Header("ダッシュUI")]
     [SerializeField] private GameObject dashUI;
     private int currentHits = 0;
@@ -26,6 +27,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float stunDuration = 2f;
     private float stunTimer = 0f;
     private bool isBubbled = false;
+
     [Header("ダッシュ衝突")]
     [SerializeField] private float dashKnockbackSpeed = 4f;
     [SerializeField] private float dashKnockbackTime = 0.2f;
@@ -44,7 +46,6 @@ public class Enemy : MonoBehaviour
     [Header("向き制御")]
     [SerializeField] private float turnThreshold = 0.8f;
     [SerializeField] private float turnCooldown = 0.2f;
-
     private float turnTimer = 0f;
 
     [Header("敵の泡攻撃")]
@@ -67,40 +68,78 @@ public class Enemy : MonoBehaviour
 
     private float attackTimer = 0f;
 
+    public enum MovementPattern
+    {
+        NormalChase,
+        Wave,
+        Circle,
+        Random
+    }
+
+    [Header("フグの移動パターン")]
+    [SerializeField]
+    private MovementPattern movementPattern =
+        MovementPattern.Random;
+
+    [SerializeField] private float waveAmplitude = 1.0f;
+    [SerializeField] private float waveFrequency = 0.8f;
+
+    [SerializeField] private float circleRadiusX = 1.5f;
+    [SerializeField] private float circleRadiusY = 0.9f;
+    [SerializeField] private float circleSpeed = 1.5f;
+    [SerializeField] private float circleCenterFollowSpeed = 0.5f;
+    [SerializeField] private float maxCircleMoveSpeed = 4f;
+
+    [SerializeField] private float screenMargin = 0.15f;
+    [SerializeField] private float minimumMoveHeight = 1.0f;
+
+    private MovementPattern activeMovementPattern;
+    private bool specialMovementStarted;
+    private float movementTime;
+    private float movementBaseY;
+    private Vector2 circleCenter;
+
     private Rigidbody2D rb;
     private float knockbackTimer = 0f;
     private float bubbleTimer = 0f;
     private Transform player;
+
     private bool isAttacking = false;
     private bool isGameOverStopped = false;
     private bool isSpawning = false;
+
     [Header("画面上撃破判定")]
     [SerializeField] private float defeatHeightOffset = 0.5f;
     private SpriteRenderer spriteRenderer;
+
     [Header("撃破時の水回復")]
     [SerializeField] private int waterRecoveryAmount = 2;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+    }
+
     private void Start()
     {
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
 
         if (playerObject != null)
         {
             player = playerObject.transform;
         }
+
+        SelectMovementPattern();
     }
+
     private void Update()
     {
-        if (isGameOverStopped)
-        {
+        if (isGameOverStopped || isSpawning)
             return;
-        }
 
-        if (isSpawning)
-        {
-            return;
-        }
-
-        // 通常弾を受けている間は移動と攻撃を停止する
+        // 通常弾によるスタン
         if (stunTimer > 0f && !isBubbled)
         {
             stunTimer -= Time.deltaTime;
@@ -111,33 +150,24 @@ public class Enemy : MonoBehaviour
             if (stunTimer <= 0f)
             {
                 stunTimer = 0f;
+                specialMovementStarted = false;
                 attackTimer = attackCooldown;
             }
 
             return;
         }
 
-        if (player != null && !isBubbled && !isAttacking)
-        {
-            ChasePlayer();
-        }
-        // =========================
-        // 敵の向き
-        // =========================
-
+        // プレイヤーの方向を向く
         if (player != null && !isBubbled)
         {
             turnTimer -= Time.deltaTime;
 
-            // プレイヤーとの横方向の距離
             float distanceX =
                 player.position.x - transform.position.x;
 
-            // 真上・真下付近では最後の向きを維持する
             if (Mathf.Abs(distanceX) > turnThreshold)
             {
                 bool playerIsLeft = distanceX < 0f;
-
                 bool enemyIsFacingLeft =
                     transform.localScale.x > 0f;
 
@@ -146,7 +176,8 @@ public class Enemy : MonoBehaviour
 
                 if (needTurn && turnTimer <= 0f)
                 {
-                    float scaleX = Mathf.Abs(transform.localScale.x);
+                    float scaleX =
+                        Mathf.Abs(transform.localScale.x);
 
                     transform.localScale = new Vector3(
                         playerIsLeft ? scaleX : -scaleX,
@@ -159,7 +190,10 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        if (player != null && !isBubbled && IsVisibleOnScreen())
+        // フグ全体が画面内に入ってから攻撃
+        if (player != null &&
+            !isBubbled &&
+            IsVisibleOnScreen())
         {
             attackTimer -= Time.deltaTime;
 
@@ -169,50 +203,68 @@ public class Enemy : MonoBehaviour
                 attackTimer = attackCooldown;
             }
         }
+
+        // 泡に捕まっている間
         if (isBubbled)
         {
-            // 上へ浮かぶ
             transform.position +=
                 Vector3.up * floatSpeed * Time.deltaTime;
 
-            // 完全に画面外へ出たら撃破
             if (IsAboveScreen())
             {
                 Defeat();
                 return;
             }
 
-            // 泡の残り時間を減らす
             bubbleTimer -= Time.deltaTime;
 
-            // 時間切れなら敵を解放
             if (bubbleTimer <= 0f)
             {
-                BubbleFinish bubbleFinish = GetComponent<BubbleFinish>();
+                BubbleFinish bubbleFinish =
+                    GetComponent<BubbleFinish>();
 
-                // 3発目が成立している場合は泡を解除しない
-                if (bubbleFinish == null || !bubbleFinish.IsFinishing)
+                if (bubbleFinish == null ||
+                    !bubbleFinish.IsFinishing)
                 {
                     ReleaseBubble();
                 }
             }
         }
+
         if (knockbackTimer > 0f)
         {
             knockbackTimer -= Time.deltaTime;
 
-            if (knockbackTimer <= 0f)
+            if (knockbackTimer <= 0f && rb != null)
             {
                 rb.velocity = Vector2.zero;
             }
         }
+    }
 
+    // Rigidbody2Dの移動は物理更新で行う
+    private void FixedUpdate()
+    {
+        if (isGameOverStopped ||
+            isSpawning ||
+            isBubbled ||
+            isAttacking ||
+            stunTimer > 0f)
+        {
+            return;
+        }
+
+        if (player != null)
+        {
+            UpdateMovementPattern();
+        }
     }
 
     public void HitByBubble(bool isFullCharge)
     {
-        // 画面外および画面に入ってからの無敵時間中は泡攻撃を無効化
-        EnemySpawnProtection protection = GetComponent<EnemySpawnProtection>();
+        EnemySpawnProtection protection =
+            GetComponent<EnemySpawnProtection>();
+
         if (protection != null && protection.IsProtected)
             return;
 
@@ -223,11 +275,15 @@ public class Enemy : MonoBehaviour
         {
             stunTimer = 0f;
             CancelChargingAttack();
-            GetBubbled(fullChargeBubbleScale, fullChargeBubbleTime);
+
+            GetBubbled(
+                fullChargeBubbleScale,
+                fullChargeBubbleTime
+            );
+
             return;
         }
 
-        // 通常弾：停止時間を更新する（何発当てても捕獲しない）
         stunTimer = stunDuration;
 
         if (rb != null)
@@ -236,14 +292,13 @@ public class Enemy : MonoBehaviour
         CancelChargingAttack();
     }
 
-    // チャージ中の攻撃泡を消し、膨らんだ体を元に戻す
     private void CancelChargingAttack()
     {
         CancelAim();
 
-        // チャージ中の泡は敵の子オブジェクトになっている。
-        // 発射済みの泡は親から外れているため削除しない。
-        EnemyBubble[] chargingBubbles = GetComponentsInChildren<EnemyBubble>();
+        EnemyBubble[] chargingBubbles =
+            GetComponentsInChildren<EnemyBubble>();
+
         foreach (EnemyBubble bubble in chargingBubbles)
         {
             if (bubble != null)
@@ -255,10 +310,7 @@ public class Enemy : MonoBehaviour
         attackTimer = attackCooldown;
     }
 
-    private void GetBubbled(
-      float bubbleScale,
-      float bubbleTime
-  )
+    private void GetBubbled(float bubbleScale, float bubbleTime)
     {
         isBubbled = true;
         CancelAim();
@@ -269,71 +321,62 @@ public class Enemy : MonoBehaviour
         if (bubbleVisual != null)
         {
             bubbleVisual.SetActive(true);
-
             bubbleVisual.transform.localScale =
                 Vector3.one * bubbleScale;
         }
 
         if (dashUI != null)
-        {
             dashUI.SetActive(false);
-        }
 
         Debug.Log(
             "敵が泡に包まれた！ 制限時間: " +
-            bubbleTime +
-            "秒"
+            bubbleTime + "秒"
         );
     }
 
     private void ReleaseBubble()
     {
-
-
         isBubbled = false;
+        specialMovementStarted = false;
 
         if (bubbleVisual != null)
-        {
             bubbleVisual.SetActive(false);
-        }
+
         attackTimer = attackCooldown;
+
         if (dashUI != null)
-        {
             dashUI.SetActive(false);
-        }
+
         EnemyBubblePop pop =
-    GetComponent<EnemyBubblePop>();
+            GetComponent<EnemyBubblePop>();
 
         if (pop != null)
-        {
             pop.PlayPop();
-        }
+
         currentHits = 0;
 
         Debug.Log("泡の時間切れ！敵が元に戻った！");
     }
+
     public bool IsBubbled
     {
         get { return isBubbled; }
     }
 
-    // EnemyBubbleから通常弾の停止状態を参照する
     public bool IsStunned
     {
         get { return stunTimer > 0f; }
     }
+
     public void ShowDashUI(bool show)
     {
         if (!isBubbled)
-        {
             return;
-        }
 
         if (dashUI != null)
-        {
             dashUI.SetActive(show);
-        }
     }
+
     public void Defeat(bool isPerfect = false)
     {
         if (!isBubbled)
@@ -341,7 +384,8 @@ public class Enemy : MonoBehaviour
 
         Debug.Log("敵を撃破！");
 
-        EnemyBubblePop pop = GetComponent<EnemyBubblePop>();
+        EnemyBubblePop pop =
+            GetComponent<EnemyBubblePop>();
 
         if (pop != null)
             pop.PlayPop();
@@ -366,22 +410,17 @@ public class Enemy : MonoBehaviour
 
         Destroy(gameObject);
     }
-    private void Awake()
-    {
-        rb = GetComponent<Rigidbody2D>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
-    }
+
     public void DashKnockback(Vector2 direction)
     {
         if (rb == null)
-        {
             return;
-        }
 
         direction = direction.normalized;
 
         rb.MovePosition(
-            rb.position + direction * dashKnockbackSpeed * dashKnockbackTime
+            rb.position +
+            direction * dashKnockbackSpeed * dashKnockbackTime
         );
     }
 
@@ -395,7 +434,8 @@ public class Enemy : MonoBehaviour
             amount
         );
 
-        float directionX = Mathf.Sign(transform.localScale.x);
+        float directionX =
+            Mathf.Sign(transform.localScale.x);
 
         transform.localScale = new Vector3(
             directionX * scale,
@@ -411,15 +451,18 @@ public class Enemy : MonoBehaviour
         if (resetInflateCoroutine != null)
             StopCoroutine(resetInflateCoroutine);
 
-        resetInflateCoroutine = StartCoroutine(ResetInflateCoroutine(duration));
+        resetInflateCoroutine =
+            StartCoroutine(ResetInflateCoroutine(duration));
     }
 
-    private System.Collections.IEnumerator ResetInflateCoroutine(float duration)
+    private IEnumerator ResetInflateCoroutine(float duration)
     {
-        float startScale = Mathf.Abs(transform.localScale.x);
-        float time = 0f;
+        float startScale =
+            Mathf.Abs(transform.localScale.x);
 
-        float directionX = Mathf.Sign(transform.localScale.x);
+        float time = 0f;
+        float directionX =
+            Mathf.Sign(transform.localScale.x);
 
         while (time < duration)
         {
@@ -448,10 +491,12 @@ public class Enemy : MonoBehaviour
             normalScale
         );
     }
-    // 敵の見た目が画面に入るまで攻撃タイマーを進めない
+
+    // フグ全体が画面内にあるか
     private bool IsVisibleOnScreen()
     {
         Camera cam = Camera.main;
+
         if (cam == null)
             return false;
 
@@ -459,39 +504,55 @@ public class Enemy : MonoBehaviour
             ? spriteRenderer.bounds
             : new Bounds(transform.position, Vector3.zero);
 
-        Vector3 min = cam.WorldToViewportPoint(bounds.min);
-        Vector3 max = cam.WorldToViewportPoint(bounds.max);
+        Vector3 min =
+            cam.WorldToViewportPoint(bounds.min);
+
+        Vector3 max =
+            cam.WorldToViewportPoint(bounds.max);
 
         if (min.z <= 0f || max.z <= 0f)
             return false;
 
-        // フグのSprite全体が画面内に収まってから攻撃を許可する
-        return min.x >= 0f && max.x <= 1f &&
-               min.y >= 0f && max.y <= 1f;
+        return min.x >= 0f &&
+               max.x <= 1f &&
+               min.y >= 0f &&
+               max.y <= 1f;
     }
 
     private void ShootEnemyBubble()
     {
-        if (enemyBubblePrefab == null || attackMuzzle == null || player == null)
+        if (enemyBubblePrefab == null ||
+            attackMuzzle == null ||
+            player == null)
+        {
             return;
+        }
 
         isAttacking = true;
-        // フグの口からプレイヤーへの方向
+
         Vector2 shootDirection =
             (player.position - attackMuzzle.position).normalized;
 
-        // 泡の生成位置を口から少し前にずらす
         Vector3 bubblePosition =
             attackMuzzle.position +
             (Vector3)(shootDirection * attackBubbleOffsetX);
 
         GameObject bubbleObject = Instantiate(
-            enemyBubblePrefab, bubblePosition, Quaternion.identity, attackMuzzle);
+            enemyBubblePrefab,
+            bubblePosition,
+            Quaternion.identity,
+            attackMuzzle
+        );
 
-        EnemyBubble enemyBubble = bubbleObject.GetComponentInChildren<EnemyBubble>();
+        EnemyBubble enemyBubble =
+            bubbleObject.GetComponentInChildren<EnemyBubble>();
+
         if (enemyBubble == null)
         {
-            Debug.LogError("EnemyBubble.csがPrefabに見つかりません！");
+            Debug.LogError(
+                "EnemyBubble.csがPrefabに見つかりません！"
+            );
+
             Destroy(bubbleObject);
             isAttacking = false;
             return;
@@ -499,39 +560,60 @@ public class Enemy : MonoBehaviour
 
         enemyBubble.SetOwner(this);
         enemyBubble.SetDirection(shootDirection);
-        if (aimCoroutine != null) StopCoroutine(aimCoroutine);
-        aimCoroutine = StartCoroutine(AimBeforeShot(enemyBubble));
+
+        if (aimCoroutine != null)
+            StopCoroutine(aimCoroutine);
+
+        aimCoroutine =
+            StartCoroutine(AimBeforeShot(enemyBubble));
     }
 
     private IEnumerator AimBeforeShot(EnemyBubble bubble)
     {
         float timer = 0f;
         Vector2 direction = Vector2.right;
+
         while (timer < aimWarningTime)
         {
-            if (bubble == null || player == null || isBubbled ||
-                isGameOverStopped || isSpawning)
+            if (bubble == null ||
+                player == null ||
+                isBubbled ||
+                isGameOverStopped ||
+                isSpawning)
             {
-                if (aimLine != null) aimLine.Hide();
+                if (aimLine != null)
+                    aimLine.Hide();
+
                 aimCoroutine = null;
                 yield break;
             }
 
             Vector2 start = attackMuzzle.position;
             Vector2 target = player.position;
+
             direction = (target - start).normalized;
+
             RotateEnemyToAim(direction);
+
             if (direction.sqrMagnitude < 0.001f)
-                direction = transform.localScale.x > 0f ? Vector2.left : Vector2.right;
+            {
+                direction = transform.localScale.x > 0f
+                    ? Vector2.left
+                    : Vector2.right;
+            }
 
             bubble.SetDirection(direction);
-            if (aimLine != null) aimLine.Show(start, target);
+
+            if (aimLine != null)
+                aimLine.Show(start, target);
+
             timer += Time.deltaTime;
             yield return null;
         }
 
-        // この時点の方向を固定。EnemyBubbleは最大チャージ時に自動発射する。
-        if (aimLine != null) aimLine.Hide();
+        if (aimLine != null)
+            aimLine.Hide();
+
         aimCoroutine = null;
     }
 
@@ -542,25 +624,202 @@ public class Enemy : MonoBehaviour
             StopCoroutine(aimCoroutine);
             aimCoroutine = null;
         }
-        if (aimLine != null) aimLine.Hide();
+
+        if (aimLine != null)
+            aimLine.Hide();
     }
 
-
-    private void ChasePlayer()
+    // 移動パターンを選択
+    private void SelectMovementPattern()
     {
-        if (player == null || rb == null)
+        activeMovementPattern = movementPattern;
+
+        if (movementPattern == MovementPattern.Random)
         {
+            int choice = Random.Range(0, 10);
+
+            activeMovementPattern = choice < 4
+                ? MovementPattern.NormalChase
+                : choice < 7
+                    ? MovementPattern.Wave
+                    : MovementPattern.Circle;
+        }
+
+        specialMovementStarted = false;
+        movementTime = 0f;
+    }
+
+    // フグの移動パターンを更新
+    private void UpdateMovementPattern()
+    {
+        if (rb == null || player == null)
+            return;
+
+        // 画面外では通常追尾で登場
+        if (!specialMovementStarted)
+        {
+            if (!IsVisibleOnScreen())
+            {
+                ChasePlayer();
+                return;
+            }
+
+            specialMovementStarted = true;
+            movementTime = 0f;
+            movementBaseY = transform.position.y;
+
+            // 現在位置から円移動を開始
+            circleCenter =
+                rb.position - new Vector2(circleRadiusX, 0f);
+        }
+
+        if (activeMovementPattern ==
+            MovementPattern.NormalChase)
+        {
+            ChasePlayer();
             return;
         }
 
-        // プレイヤーとの横方向の距離
+        movementTime += Time.fixedDeltaTime;
+
+        // 波状移動
+        if (activeMovementPattern == MovementPattern.Wave)
+        {
+            float distanceX =
+                player.position.x - transform.position.x;
+
+            float horizontal =
+                Mathf.Abs(distanceX) > turnThreshold
+                    ? Mathf.Sign(distanceX) * chaseSpeed
+                    : 0f;
+
+            float targetY =
+                movementBaseY +
+                Mathf.Sin(
+                    movementTime *
+                    waveFrequency *
+                    Mathf.PI * 2f
+                ) * waveAmplitude;
+
+            Vector2 target = ClampMovementTarget(
+                new Vector2(rb.position.x, targetY)
+            );
+
+            float vertical = Mathf.Clamp(
+                (target.y - rb.position.y) * 5f,
+                -maxCircleMoveSpeed,
+                maxCircleMoveSpeed
+            );
+
+            rb.velocity = new Vector2(
+                horizontal,
+                vertical
+            );
+
+            return;
+        }
+
+        // 円の中心をゆっくりプレイヤーへ追従
+        float followStep =
+            Mathf.Max(0f, circleCenterFollowSpeed) *
+            Time.fixedDeltaTime;
+
+        circleCenter.x = Mathf.MoveTowards(
+            circleCenter.x,
+            player.position.x,
+            followStep
+        );
+
+        float angle = movementTime * circleSpeed;
+
+        Vector2 circleTarget =
+            circleCenter +
+            new Vector2(
+                Mathf.Cos(angle) * circleRadiusX,
+                Mathf.Sin(angle) * circleRadiusY
+            );
+
+        circleTarget = ClampMovementTarget(circleTarget);
+
+        // 速度を滑らかに制御
+        const float circleTrackingStrength = 3f;
+
+        Vector2 desiredVelocity =
+            (circleTarget - rb.position) *
+            circleTrackingStrength;
+
+        rb.velocity = Vector2.ClampMagnitude(
+            desiredVelocity,
+            Mathf.Max(0.1f, maxCircleMoveSpeed)
+        );
+    }
+
+    // 画面端・地面への移動を制限
+    private Vector2 ClampMovementTarget(Vector2 target)
+    {
+        Camera cam = Camera.main;
+
+        if (cam == null || !cam.orthographic)
+        {
+            return new Vector2(
+                target.x,
+                Mathf.Max(target.y, minimumMoveHeight)
+            );
+        }
+
+        float halfHeight = cam.orthographicSize;
+        float halfWidth = halfHeight * cam.aspect;
+
+        Vector3 center = cam.transform.position;
+
+        Vector3 extents = spriteRenderer != null
+            ? spriteRenderer.bounds.extents
+            : Vector3.zero;
+
+        float left =
+            center.x - halfWidth +
+            extents.x + screenMargin;
+
+        float right =
+            center.x + halfWidth -
+            extents.x - screenMargin;
+
+        float bottom = Mathf.Max(
+            center.y - halfHeight +
+            extents.y + screenMargin,
+            minimumMoveHeight
+        );
+
+        float top =
+            center.y + halfHeight -
+            extents.y - screenMargin;
+
+        target.x = Mathf.Clamp(
+            target.x,
+            Mathf.Min(left, right),
+            Mathf.Max(left, right)
+        );
+
+        target.y = Mathf.Clamp(
+            target.y,
+            Mathf.Min(bottom, top),
+            Mathf.Max(bottom, top)
+        );
+
+        return target;
+    }
+
+    // 従来の横方向追尾
+    private void ChasePlayer()
+    {
+        if (player == null || rb == null)
+            return;
+
         float distanceX =
             player.position.x - transform.position.x;
 
-        // プレイヤーが真上・真下付近にいる場合
         if (Mathf.Abs(distanceX) <= turnThreshold)
         {
-            // 左右移動を停止
             rb.velocity = new Vector2(
                 0f,
                 rb.velocity.y
@@ -569,7 +828,6 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        // プレイヤーが左右に離れている場合だけ追跡
         float direction = Mathf.Sign(distanceX);
 
         rb.velocity = new Vector2(
@@ -584,32 +842,32 @@ public class Enemy : MonoBehaviour
 
         if (enemyVisual != null)
         {
-            enemyVisual.localRotation = Quaternion.identity;
+            enemyVisual.localRotation =
+                Quaternion.identity;
         }
     }
+
     public void StopForGameOver()
     {
         if (isGameOverStopped)
-        {
             return;
-        }
 
         isGameOverStopped = true;
         CancelAim();
 
-        // 移動を完全に停止
         if (rb != null)
         {
             rb.velocity = Vector2.zero;
             rb.simulated = false;
         }
 
-        // 攻撃中も解除
         isAttacking = false;
     }
+
     private bool IsAboveScreen()
     {
-        if (Camera.main == null || spriteRenderer == null)
+        if (Camera.main == null ||
+            spriteRenderer == null)
         {
             return false;
         }
@@ -624,41 +882,47 @@ public class Enemy : MonoBehaviour
 
         return spriteRenderer.bounds.center.y > defeatLine;
     }
+
     public void StartSpawnSequence()
     {
         isSpawning = true;
+        specialMovementStarted = false;
+
         CancelAim();
 
         if (rb != null)
-        {
             rb.velocity = Vector2.zero;
-        }
 
         isAttacking = false;
     }
+
     public void EndSpawnSequence()
     {
         isSpawning = false;
-
-        // 出現直後に即攻撃しないようにする
         attackTimer = attackCooldown;
     }
+
     private void RotateEnemyToAim(Vector2 direction)
     {
-        if (enemyVisual == null) return;
+        if (enemyVisual == null)
+            return;
 
-        // 左右反転を考慮して、上下の傾きを計算
         float angle = Mathf.Atan2(
             direction.y,
             Mathf.Abs(direction.x)
         ) * Mathf.Rad2Deg;
 
-        angle = Mathf.Clamp(angle, -maxAimAngle, maxAimAngle);
+        angle = Mathf.Clamp(
+            angle,
+            -maxAimAngle,
+            maxAimAngle
+        );
 
-        // 左右反転に応じて回転方向を調整
-        float facingSign = Mathf.Sign(transform.localScale.x);
+        float facingSign =
+            Mathf.Sign(transform.localScale.x);
 
-        float targetAngle = -angle * facingSign;
+        float targetAngle =
+            -angle * facingSign;
 
         Quaternion targetRotation =
             Quaternion.Euler(0f, 0f, targetAngle);

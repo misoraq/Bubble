@@ -201,6 +201,7 @@ MonoBehaviour:
   attackCooldown: 2
   animator: {fileID: 1613736669357039355}
   crabRenderer: {fileID: 6598457847425026368}
+  waterDamage: 2
 --- !u!114 &3618710987582923927
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -8,6 +8,10 @@ public class GunSkinUI : MonoBehaviour
     [Header("ショップ画面")]
     [SerializeField] private GameObject gunSkinPanel;
 
+    [Header("タイトル画面のボタン")]
+    [SerializeField] private GameObject startButton;
+    [SerializeField] private GameObject gunSkinButton;
+
     [Header("スキン詳細")]
     [SerializeField] private TMP_Text skinNameText;
     [SerializeField] private Image skinImage;
@@ -68,10 +72,20 @@ public class GunSkinUI : MonoBehaviour
         {
             gunSkinPanel.SetActive(false);
         }
+
+        SetTitleButtonsVisible(true);
+    }
+
+    private void SetTitleButtonsVisible(bool visible)
+    {
+        if (startButton != null) startButton.SetActive(visible);
+        if (gunSkinButton != null) gunSkinButton.SetActive(visible);
     }
 
     public void OpenGunSkinPanel()
     {
+        SetTitleButtonsVisible(false);
+
         if (gunSkinPanel != null)
         {
             gunSkinPanel.SetActive(true);
@@ -87,6 +101,8 @@ public class GunSkinUI : MonoBehaviour
 
     public void CloseGunSkinPanel()
     {
+        SetTitleButtonsVisible(true);
+
         if (gunSkinPanel != null)
         {
             gunSkinPanel.SetActive(false);
@@ -193,14 +209,12 @@ public class GunSkinUI : MonoBehaviour
             }
             else if (skinId == GunSkinManager.BowGun)
             {
-                unlockConditionText.text = "星3で解放";
+                int kills = EnemyKillRecords.GetKills("Pufferfish");
+                unlockConditionText.text = $"フグを20体撃破\n{Mathf.Min(kills, 20)} / 20";
             }
             else if (skinId == GunSkinManager.PufferGun)
             {
-                int kills = EnemyKillRecords.GetKills("Pufferfish");
-
-                unlockConditionText.text =
-                    $"フグを20体撃破\n{Mathf.Min(kills, 20)} / 20";
+                unlockConditionText.text = "星3で解放";
             }
             else if (skinId == GunSkinManager.JellyfishGun)
             {
@@ -240,8 +254,14 @@ public class GunSkinUI : MonoBehaviour
             ? Color.white
             : Color.black;
 
-        if (skinId == GunSkinManager.PufferGun ||
-    skinId == GunSkinManager.JellyfishGun ||
+        if (skinId == GunSkinManager.PufferGun)
+        {
+            bool conditionMet = manager != null && manager.GetBestStars() >= 3;
+            unlockConditionText.text = conditionMet
+                ? "条件達成！ 武器は準備中"
+                : "星3でクリアすると解放\n未解放";
+        }
+        else if (skinId == GunSkinManager.JellyfishGun ||
     skinId == GunSkinManager.CrabGun)
         {
             string enemyType = "";
@@ -250,12 +270,6 @@ public class GunSkinUI : MonoBehaviour
 
             switch (skinId)
             {
-                case GunSkinManager.PufferGun:
-                    enemyType = "Pufferfish";
-                    enemyName = "フグ";
-                    requiredKills = 20;
-                    break;
-
                 case GunSkinManager.JellyfishGun:
                     enemyType = "Jellyfish";
                     enemyName = "クラゲ";
@@ -474,13 +488,12 @@ public class GunSkinUI : MonoBehaviour
 
     private void UpdateAdditionalSkinProgress()
     {
-        UpdateSkinProgress(
-            GunSkinManager.PufferGun,
-            "Pufferfish",
-            20,
-            pufferLockImage,
-            pufferProgressText
-        );
+        GunSkinManager manager = GunSkinManager.Instance;
+        bool pufferUnlocked = manager != null && manager.IsUnlocked(GunSkinManager.PufferGun);
+        if (pufferLockImage != null)
+            pufferLockImage.SetActive(!pufferUnlocked);
+        if (pufferProgressText != null)
+            pufferProgressText.text = pufferUnlocked ? "条件達成" : "星3で解放";
 
         UpdateSkinProgress(
             GunSkinManager.JellyfishGun,

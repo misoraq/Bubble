@@ -1,4 +1,3 @@
-
 using System.Collections;
 using UnityEngine;
 
@@ -22,6 +21,9 @@ public class CrabAttack : MonoBehaviour
     [Header("参照")]
     [SerializeField] private Animator animator;
     [SerializeField] private SpriteRenderer crabRenderer;
+
+    [Header("突進ヒット時の水ダメージ")]
+    [SerializeField] private int waterDamage = 3;
 
     private Rigidbody2D rb;
     private Transform player;
@@ -234,8 +236,17 @@ public class CrabAttack : MonoBehaviour
         if (playerMove == null)
             return;
 
+        // フェーズ演出中は攻撃を成立させない
+        if (PhaseAnnouncementUI.IsPlaying)
+            return;
+
         hasHitPlayer = true;
         playerMove.HitByCrabCharge(chargeDirection);
+
+        // 1回の突進につき1度だけ水を減らす
+        WaterGun waterGun = playerMove.GetComponentInChildren<WaterGun>();
+        if (waterGun != null && waterDamage > 0)
+            waterGun.TakeDamage(waterDamage);
     }
 
     // 通常泡による停止・捕獲処理と連携するためのメソッド

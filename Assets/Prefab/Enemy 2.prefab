@@ -217,6 +217,16 @@ MonoBehaviour:
   aimRotateSpeed: 1
   aimLine: {fileID: -8930192156977532675}
   aimWarningTime: 0.8
+  movementPattern: 2
+  waveAmplitude: 1
+  waveFrequency: 0.8
+  circleRadiusX: 1.2
+  circleRadiusY: 0.7
+  circleSpeed: 1
+  circleCenterFollowSpeed: 0.3
+  maxCircleMoveSpeed: 2
+  screenMargin: 0.15
+  minimumMoveHeight: 1
   defeatHeightOffset: 0.3
   waterRecoveryAmount: 2
 --- !u!114 &-8930192156977532675
