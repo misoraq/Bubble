@@ -453,7 +453,6 @@ GameObject:
   - component: {fileID: 245773879}
   - component: {fileID: 245773878}
   - component: {fileID: 245773877}
-  - component: {fileID: 245773876}
   m_Layer: 5
   m_Name: RetryButton (1)
   m_TagString: Untagged
@@ -478,20 +477,8 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -359}
-  m_SizeDelta: {x: 150, y: 125}
+  m_SizeDelta: {x: 250, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!225 &245773876
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 245773874}
-  m_Enabled: 1
-  m_Alpha: 0
-  m_Interactable: 0
-  m_BlocksRaycasts: 0
-  m_IgnoreParentGroups: 0
 --- !u!114 &245773877
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -653,7 +640,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -273.75}
-  m_SizeDelta: {x: 250, y: 70}
+  m_SizeDelta: {x: 225, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &266393278
 MonoBehaviour:
@@ -3079,6 +3066,7 @@ MonoBehaviour:
   unlitStarSprite: {fileID: -5600482717610278343, guid: f65162aceef660a45b35cf2e5e7a975b, type: 3}
   litStarSprite: {fileID: -5492078972885340534, guid: f65162aceef660a45b35cf2e5e7a975b, type: 3}
   returnTitleButton: {fileID: 266393276}
+  retryButton: {fileID: 245773874}
   titleDuration: 0.8
   titleStartOffset: -100
   popDuration: 0.25
@@ -3773,6 +3761,70 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &975384366
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 975384368}
+  - component: {fileID: 975384367}
+  m_Layer: 0
+  m_Name: GameSoundManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &975384367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 975384366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4dbb3ba494738b43b30db051d7d7402, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sfxSource: {fileID: 0}
+  waterGunShoot: {fileID: 8300000, guid: 23232004116f31c4eaeba6b17c60fa19, type: 3}
+  enemyHit: {fileID: 8300000, guid: dd56f5208604c2944b8c71b87e78d68a, type: 3}
+  enemyDefeat: {fileID: 8300000, guid: 47b45c4f17414d8448dbf1ee78624a7d, type: 3}
+  playerDamage: {fileID: 8300000, guid: 8e255438920e5f347a432d79e00fb8ae, type: 3}
+  phaseStart: {fileID: 8300000, guid: 6a3be130190989d43924fdda66a1a92d, type: 3}
+  gameClear: {fileID: 8300000, guid: a1e9e43de2fcbc94bac1a4212dc619b4, type: 3}
+  gameOver: {fileID: 8300000, guid: d0a8cfd5e14096f4a939061f1cb35a04, type: 3}
+  enemyTrap: {fileID: 8300000, guid: acbb95cf39ee62447b0ad6de858e997e, type: 3}
+  resultScoreCount: {fileID: 8300000, guid: 84d4b1a4121bbf1428ca3bd715eeaae8, type: 3}
+  perfectText: {fileID: 8300000, guid: f9a05a1dbdd54074e84361ec22ae574b, type: 3}
+  warningSound: {fileID: 8300000, guid: 9387a25521324804cbdcbaea5377dcdd, type: 3}
+  warningSource: {fileID: 0}
+  loopWarning: 1
+  mainBGM: {fileID: 8300000, guid: f757b6b204f214346b08e890bd4eefc3, type: 3}
+  bgmSource: {fileID: 0}
+  playBGMOnStart: 1
+  bgmVolume: 0.152
+  warningBgmVolumeMultiplier: 0.081
+  sfxVolume: 0.8
+--- !u!4 &975384368
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 975384366}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1210.4824, y: 836.2643, z: -7.0273175}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &985621808
 GameObject:
   m_ObjectHideFlags: 0
@@ -4501,6 +4553,7 @@ GameObject:
   - component: {fileID: 1303701446}
   - component: {fileID: 1303701445}
   - component: {fileID: 1303701444}
+  - component: {fileID: 1303701447}
   m_Layer: 5
   m_Name: ReturnTitleButton (1)
   m_TagString: Untagged
@@ -4524,8 +4577,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -203}
-  m_SizeDelta: {x: 250, y: 70}
+  m_AnchoredPosition: {x: 0, y: -135}
+  m_SizeDelta: {x: 125, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1303701444
 MonoBehaviour:
@@ -4621,6 +4674,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1303701442}
   m_CullTransparentMesh: 1
+--- !u!225 &1303701447
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1303701442}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &1310222709
 GameObject:
   m_ObjectHideFlags: 0
@@ -10515,6 +10580,7 @@ MonoBehaviour:
   gameOverUI: {fileID: 0}
   startRadius: 2
   endRadius: 0.15
+  jetpackFuelGauge: {fileID: 1841885761}
   maxAlpha: 1
 --- !u!1 &1807197754
 GameObject:
@@ -11541,6 +11607,8 @@ MonoBehaviour:
   bounceHeight: 80
   bounceDuration: 0.4
   retryButtonGroup: {fileID: 2072553165}
+  titleButtonGroup: {fileID: 1303701447}
+  jetpackFuelGauge: {fileID: 1841885761}
   retryWaitDuration: 1.5
   retryFadeDuration: 0.8
 --- !u!1 &1973451780
@@ -11907,3 +11975,4 @@ SceneRoots:
   - {fileID: 4654332478345001983}
   - {fileID: 1829809515}
   - {fileID: 896142523}
+  - {fileID: 975384368}

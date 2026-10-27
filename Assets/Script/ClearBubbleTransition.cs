@@ -37,6 +37,8 @@ public class ClearBubbleTransition : MonoBehaviour
         if (isPlaying)
             return;
 
+        GameCursorController.ShowResultCursor();
+
         StartCoroutine(TransitionRoutine());
     }
 

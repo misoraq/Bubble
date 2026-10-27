@@ -18,6 +18,11 @@ public class GameOverDropUI : MonoBehaviour
     [Header("リトライボタン")]
     [SerializeField] private CanvasGroup retryButtonGroup;
 
+    [Header("タイトルへ戻るボタン")]
+    [SerializeField] private CanvasGroup titleButtonGroup;
+
+    [Header("ゲームオーバー時に非表示にするUI")]
+    [SerializeField] private GameObject jetpackFuelGauge;
     [Header("リトライボタン表示設定")]
     [SerializeField] private float retryWaitDuration = 2f;
     [SerializeField] private float retryFadeDuration = 0.8f;
@@ -33,16 +38,18 @@ public class GameOverDropUI : MonoBehaviour
         // 最初から画面上部に待機させる
         gameOverImage.anchoredPosition =
             targetPosition + Vector2.up * startOffsetY;
-        if (retryButtonGroup != null)
-        {
-            retryButtonGroup.alpha = 0f;
-            retryButtonGroup.interactable = false;
-            retryButtonGroup.blocksRaycasts = false;
-        }
+        HideButton(retryButtonGroup);
+        HideButton(titleButtonGroup);
     }
 
     public void PlayDrop()
     {
+        GameCursorController.ShowResultCursor();
+
+        if (jetpackFuelGauge != null)
+        {
+            jetpackFuelGauge.SetActive(false);
+        }
         if (gameOverImage == null)
         {
             Debug.LogWarning("GameOverImageが設定されていません！");
@@ -52,6 +59,8 @@ public class GameOverDropUI : MonoBehaviour
         Debug.Log("GAME OVER落下演出開始");
 
         StopAllCoroutines();
+        HideButton(retryButtonGroup);
+        HideButton(titleButtonGroup);
         StartCoroutine(DropSequence());
     }
 
@@ -106,30 +115,36 @@ public class GameOverDropUI : MonoBehaviour
         // バウンド終了後、指定秒数待機
         yield return new WaitForSecondsRealtime(retryWaitDuration);
 
-        // リトライボタンをフェードイン
-        if (retryButtonGroup != null)
+        // 両方のボタンを同じタイミングでフェードイン
+        float fadeTimer = 0f;
+        while (fadeTimer < retryFadeDuration)
         {
-            float fadeTimer = 0f;
+            fadeTimer += Time.unscaledDeltaTime;
+            float t = Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01(fadeTimer / Mathf.Max(retryFadeDuration, 0.01f)));
 
-            while (fadeTimer < retryFadeDuration)
-            {
-                fadeTimer += Time.unscaledDeltaTime;
-
-                float t = Mathf.Clamp01(
-                    fadeTimer / Mathf.Max(retryFadeDuration, 0.01f)
-                );
-
-                // ゆっくり自然に表示
-                t = Mathf.SmoothStep(0f, 1f, t);
-
-                retryButtonGroup.alpha = t;
-
-                yield return null;
-            }
-
-            retryButtonGroup.alpha = 1f;
-            retryButtonGroup.interactable = true;
-            retryButtonGroup.blocksRaycasts = true;
+            if (retryButtonGroup != null) retryButtonGroup.alpha = t;
+            if (titleButtonGroup != null) titleButtonGroup.alpha = t;
+            yield return null;
         }
+
+        ShowButton(retryButtonGroup);
+        ShowButton(titleButtonGroup);
+    }
+
+    private void HideButton(CanvasGroup group)
+    {
+        if (group == null) return;
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = false;
+    }
+
+    private void ShowButton(CanvasGroup group)
+    {
+        if (group == null) return;
+        group.alpha = 1f;
+        group.interactable = true;
+        group.blocksRaycasts = true;
     }
 }

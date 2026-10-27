@@ -26,6 +26,9 @@ public class ClearResultAnimation : MonoBehaviour
     [Header("タイトルボタン")]
     [SerializeField] private GameObject returnTitleButton;
 
+    [Header("リトライボタン")]
+    [SerializeField] private GameObject retryButton;
+
     [Header("タイトルの浮上演出")]
     [SerializeField] private float titleDuration = 0.8f;
     [SerializeField] private float titleStartOffset = -100f;
@@ -128,6 +131,9 @@ public class ClearResultAnimation : MonoBehaviour
 
         if (returnTitleButton != null)
             returnTitleButton.SetActive(false);
+
+        if (retryButton != null)
+            retryButton.SetActive(false);
     }
 
     public void PlayAnimation()
@@ -144,6 +150,8 @@ public class ClearResultAnimation : MonoBehaviour
         yield return StartCoroutine(FloatTitle());
         yield return new WaitForSecondsRealtime(interval);
 
+        // 撃破数の表示が始まるときに集計音を1回再生する。
+        GameSoundManager.Instance?.PlayResultScoreCount();
         yield return StartCoroutine(Pop(pufferfishGroup));
         yield return new WaitForSecondsRealtime(interval);
 
@@ -178,6 +186,9 @@ public class ClearResultAnimation : MonoBehaviour
 
         if (returnTitleButton != null)
             returnTitleButton.SetActive(true);
+
+        if (retryButton != null)
+            retryButton.SetActive(true);
 
         animationCoroutine = null;
     }

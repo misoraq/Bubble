@@ -83,6 +83,9 @@ public class StageManager : MonoBehaviour
         FreezePlayer();
         stageCleared = true;
 
+        // ゲームクリア確定時に一度だけ再生
+        GameSoundManager.Instance?.PlayGameClear();
+
         Debug.Log("ステージクリア！");
         Debug.Log("最終撃破数 : " + defeatedEnemies);
 
@@ -147,6 +150,7 @@ public class StageManager : MonoBehaviour
 
     public void RetryStage()
     {
+        GameCursorController.HideResultCursor();
         Time.timeScale = 1f;
 
         Scene currentScene =
@@ -164,6 +168,8 @@ public class StageManager : MonoBehaviour
     public void AddDefeatedEnemy()
     {
         defeatedEnemies++;
+        // フグ・クラゲ・カニ共通の撃破音
+        GameSoundManager.Instance?.PlayEnemyDefeat();
         Debug.Log("敵撃破数 : " + defeatedEnemies);
     }
 

@@ -114,6 +114,8 @@ public class EnemySpawner : MonoBehaviour
 
     private IEnumerator BeginStageRoutine()
     {
+        GameSoundManager.Instance?.PlayPhaseStart();
+
         if (phaseAnnouncement != null)
         {
             yield return StartCoroutine(
@@ -280,6 +282,8 @@ public class EnemySpawner : MonoBehaviour
 
         if (isPhaseChange)
         {
+            GameSoundManager.Instance?.PlayPhaseStart();
+
             Debug.Log(
                 "PHASE " + previousPhase +
                 " CLEAR! Å® PHASE " + nextPhase

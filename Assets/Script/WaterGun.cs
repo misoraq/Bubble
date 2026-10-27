@@ -264,6 +264,9 @@ public class WaterGun : MonoBehaviour
         // 泡を発射
         chargingBubbleScript.Shoot();
 
+        // 水鉄砲を実際に発射したときだけ効果音を鳴らす
+        GameSoundManager.Instance?.PlayWaterGunShoot();
+
         // チャージ量に応じて水を消費
         int waterCost;
 
@@ -336,6 +339,7 @@ public class WaterGun : MonoBehaviour
 
         isWaterEmpty = true;
         emptyTimer = emptyGameOverTime;
+        GameSoundManager.Instance?.PlayWarningSound();
 
         if (dangerFlash != null)
         {
@@ -348,6 +352,7 @@ public class WaterGun : MonoBehaviour
         if (currentWater > 0)
         {
             isWaterEmpty = false;
+            GameSoundManager.Instance?.StopWarningSound();
 
             if (dangerFlash != null)
             {
@@ -362,6 +367,7 @@ public class WaterGun : MonoBehaviour
         if (emptyTimer <= 0f)
         {
             isWaterEmpty = false;
+            GameSoundManager.Instance?.StopWarningSound();
 
             if (dangerFlash != null)
             {
@@ -380,6 +386,9 @@ public class WaterGun : MonoBehaviour
         }
 
         isGameOver = true;
+
+        // ゲームオーバー確定時に1回だけ再生
+        GameSoundManager.Instance?.PlayGameOver();
 
         Debug.Log("水残量0！ GAME OVER");
 
@@ -405,8 +414,13 @@ public class WaterGun : MonoBehaviour
             return;
         }
 
+        if (damage <= 0) return;
+
         currentWater -= damage;
         currentWater = Mathf.Max(currentWater, 0);
+
+        // 敵の攻撃で水が減ったときに再生
+        GameSoundManager.Instance?.PlayPlayerDamage();
 
         Debug.Log("ダメージ！ 水残量 : " + currentWater);
 
@@ -461,6 +475,7 @@ public class WaterGun : MonoBehaviour
         mustReleaseMouseAfterShock = true;
         electricDisableTimer = 0f;
         isWaterEmpty = false;
+        GameSoundManager.Instance?.StopWarningSound();
 
         if (chargingBubble != null)
             Destroy(chargingBubble);

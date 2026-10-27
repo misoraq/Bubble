@@ -313,6 +313,7 @@ public class Enemy : MonoBehaviour
     private void GetBubbled(float bubbleScale, float bubbleTime)
     {
         isBubbled = true;
+        GameSoundManager.Instance?.PlayEnemyTrap();
         CancelAim();
 
         attackTimer = attackCooldown;

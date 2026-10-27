@@ -73,6 +73,7 @@ public class CrabBubbleHit : MonoBehaviour
         }
 
         IsBubbled = true;
+        GameSoundManager.Instance?.PlayEnemyTrap();
         crabAttack.SetPaused(true);
 
 

@@ -16,6 +16,9 @@ public class GameOverUI : MonoBehaviour
     [Header("Retry")]
     [SerializeField] private GameObject retryButton;
 
+    [Header("タイトルへ戻るボタン")]
+    [SerializeField] private GameObject titleButton;
+
     [Header("演出時間")]
     [SerializeField] private float appearDuration = 0.25f;
     [SerializeField] private float inflateDuration = 0.45f;
@@ -27,7 +30,8 @@ public class GameOverUI : MonoBehaviour
     [SerializeField] private float startScale = 0.65f;
     [SerializeField] private float normalScale = 1f;
     [SerializeField] private float maxScale = 1.12f;
-
+    [Header("ゲームオーバー時に非表示にするUI")]
+    [SerializeField] private GameObject jetpackFuelGauge;
     private RectTransform gameOverRect;
 
     private void Awake()
@@ -43,6 +47,9 @@ public class GameOverUI : MonoBehaviour
             retryButton.SetActive(false);
         }
 
+        if (titleButton != null)
+            titleButton.SetActive(false);
+
         if (gameOverImage != null)
         {
             gameOverImage.gameObject.SetActive(false);
@@ -51,9 +58,15 @@ public class GameOverUI : MonoBehaviour
 
     public void PlayGameOver()
     {
+        GameCursorController.ShowResultCursor();
+
+        if (jetpackFuelGauge != null)
+        {
+            jetpackFuelGauge.SetActive(false);
+        }
+
         StartCoroutine(GameOverSequence());
     }
-
     private IEnumerator GameOverSequence()
     {
         // --------------------------------
@@ -169,39 +182,36 @@ public class GameOverUI : MonoBehaviour
             retryDelay
         );
 
-        if (retryButton != null)
+        // 既存のリトライと追加したタイトルボタンを同時に拡大表示
+        RectTransform retryRect = PrepareButton(retryButton);
+        RectTransform titleRect = PrepareButton(titleButton);
+
+        timer = 0f;
+        const float buttonDuration = 0.3f;
+        while (timer < buttonDuration)
         {
-            retryButton.SetActive(true);
+            timer += Time.unscaledDeltaTime;
+            float t = Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01(timer / buttonDuration));
 
-            RectTransform retryRect =
-                retryButton.GetComponent<RectTransform>();
+            if (retryRect != null)
+                retryRect.localScale = Vector3.one * t;
+            if (titleRect != null)
+                titleRect.localScale = Vector3.one * t;
 
-            retryRect.localScale =
-                Vector3.zero;
-
-            timer = 0f;
-
-            while (timer < 0.3f)
-            {
-                timer += Time.unscaledDeltaTime;
-
-                float t =
-                    Mathf.Clamp01(timer / 0.3f);
-
-                t = Mathf.SmoothStep(0f, 1f, t);
-
-                retryRect.localScale =
-                    Vector3.Lerp(
-                        Vector3.zero,
-                        Vector3.one,
-                        t
-                    );
-
-                yield return null;
-            }
-
-            retryRect.localScale =
-                Vector3.one;
+            yield return null;
         }
+
+        if (retryRect != null) retryRect.localScale = Vector3.one;
+        if (titleRect != null) titleRect.localScale = Vector3.one;
+    }
+
+    private RectTransform PrepareButton(GameObject button)
+    {
+        if (button == null) return null;
+        button.SetActive(true);
+        RectTransform rect = button.GetComponent<RectTransform>();
+        if (rect != null) rect.localScale = Vector3.zero;
+        return rect;
     }
 }

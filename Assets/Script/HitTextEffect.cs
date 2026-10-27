@@ -82,6 +82,8 @@ public class HitTextEffect : MonoBehaviour
         Vector3 viewportPosition =
             Camera.main.WorldToViewportPoint(worldPosition);
 
+        GameSoundManager.Instance?.PlayPerfectText();
+
         PixelBattleTextController.DisplayText(
             "PERFECT!",
             animation,

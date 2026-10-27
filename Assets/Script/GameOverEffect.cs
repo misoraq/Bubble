@@ -32,6 +32,8 @@ public class GameOverEffect : MonoBehaviour
     [SerializeField] private float startRadius = 0.65f;
     [SerializeField] private float endRadius = 0.15f;
 
+    [Header("ゲームオーバー時に非表示にするUI")]
+    [SerializeField] private GameObject jetpackFuelGauge;
     [Header("暗さ")]
     [SerializeField] private float maxAlpha = 0.9f;
 
@@ -105,11 +107,17 @@ public class GameOverEffect : MonoBehaviour
 
     public void StartGameOver()
     {
+        GameCursorController.ShowResultCursor();
+
+        if (jetpackFuelGauge != null)
+        {
+            jetpackFuelGauge.SetActive(false);
+        }
         if (isGameOver)
             return;
 
         isGameOver = true;
-
+      
         // Playerの操作を止める
         StopPlayer();
 
@@ -119,6 +127,7 @@ public class GameOverEffect : MonoBehaviour
 
     private void StopPlayer()
     {
+
         if (player == null)
             return;
 

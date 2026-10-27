@@ -200,6 +200,9 @@ public class Bubble : MonoBehaviour
         if (hitTarget == null)
             return;
 
+        // “G‚Ö‚Ì–½’†‚ÉHIT‰¹‚ğÄ¶
+        GameSoundManager.Instance?.PlayEnemyHit();
+
         HitTextEffect hitTextEffect =
             FindObjectOfType<HitTextEffect>();
 

@@ -131,6 +131,7 @@ public class JellyfishBubbleHit : MonoBehaviour
     private void GetBubbled(float scale, float duration)
     {
         isBubbled = true;
+        GameSoundManager.Instance?.PlayEnemyTrap();
         bubbleTimer = duration;
 
         if (attack != null) attack.PauseForBubble(true);
