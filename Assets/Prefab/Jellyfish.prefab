@@ -232,7 +232,7 @@ MonoBehaviour:
   bubbleVisual: {fileID: 5595760718126007709}
   smallBubbleScale: 0.2
   fullChargeBubbleScale: 0.5
-  smallBubbleTime: 3
+  smallBubbleTime: 1.5
   fullChargeBubbleTime: 7
   floatSpeed: 1.5
   requiredHits: 3
@@ -280,7 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd92cdc7ccb0dbb479396f064e6d5119, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  protectionDuration: 1
+  protectionDuration: 0.3
   screenMargin: 0
 --- !u!1 &7978564187298805182
 GameObject:

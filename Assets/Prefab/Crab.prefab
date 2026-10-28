@@ -216,7 +216,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   stunDuration: 2
   captureBubblePrefab: {fileID: 3453765386783659360}
-  captureDuration: 5
+  captureDuration: 1
   riseSpeed: 1.5
   waterRecoveryAmount: 2
 --- !u!114 &926008089517994453
@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd92cdc7ccb0dbb479396f064e6d5119, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  protectionDuration: 1
+  protectionDuration: 0.3
   screenMargin: 0
 --- !u!1001 &32550057725619505
 PrefabInstance:

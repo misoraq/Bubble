@@ -11669,7 +11669,7 @@ MonoBehaviour:
   crabSpawnY: -3.8
   crabEdgeMargin: 1
   warningPrefab: {fileID: 8024609266922838090, guid: f84fede2d818c9d4bbd1c415d022f503, type: 3}
-  warningDuration: 1
+  warningDuration: 0.3
   warningBlinkInterval: 0.15
   warningEdgeMargin: 0.8
   minimumSpawnDistance: 2.5

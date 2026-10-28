@@ -196,7 +196,7 @@ MonoBehaviour:
   smallBubbleScale: 0.17
   fullChargeBubbleScale: 0.17
   smallBubbleTime: 2
-  fullChargeBubbleTime: 3
+  fullChargeBubbleTime: 1.5
   floatSpeed: 1.5
   requiredHits: 3
   dashUI: {fileID: 0}
@@ -287,7 +287,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd92cdc7ccb0dbb479396f064e6d5119, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  protectionDuration: 1
+  protectionDuration: 0.3
   screenMargin: 0
 --- !u!1 &9115026133233920732
 GameObject:
