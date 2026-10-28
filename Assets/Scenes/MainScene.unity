@@ -1295,6 +1295,10 @@ PrefabInstance:
       value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 6404949437664711585, guid: b8ce4a6200b44dfaae185d7347ed4cc2, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6404949437664711585, guid: b8ce4a6200b44dfaae185d7347ed4cc2, type: 3}
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 5f94d5bb692840c3b94ca109b999e113, type: 2}
@@ -3178,8 +3182,8 @@ MonoBehaviour:
   airAcceleration: 5
   animator: {fileID: 815711209}
   jetFlame: {fileID: 493566645}
-  jetpackForce: 4
-  jetpackMaxSpeed: 4
+  jetpackForce: 25
+  jetpackMaxSpeed: 10
   maxFuel: 5
   fuelConsumptionPerSecond: 1
   fuelRecoveryPerSecond: 1.5

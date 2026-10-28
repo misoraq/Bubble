@@ -27,6 +27,7 @@ public class PlayerMove : MonoBehaviour
 
     private float currentFuel;
     private float fuelRecoveryTimer;
+    private bool jetpackActive;
 
     public float CurrentFuel => currentFuel;
     public float MaxFuel => maxFuel;
@@ -307,6 +308,7 @@ public class PlayerMove : MonoBehaviour
 
         bool wantsJetpack = Input.GetKey(KeyCode.Space);
         bool canJetpack = wantsJetpack && currentFuel > 0f;
+        jetpackActive = canJetpack;
 
         if (canJetpack)
         {
@@ -504,42 +506,38 @@ public class PlayerMove : MonoBehaviour
 
     private void LimitToScreen()
     {
-        if (Camera.main == null)
+        Camera cam = Camera.main;
+        if (cam == null || rb == null)
             return;
 
-        Vector3 viewPos =
-            Camera.main.WorldToViewportPoint(
-                transform.position
-            );
+        Vector3 viewPos = cam.WorldToViewportPoint(rb.position);
+        bool needsCorrection = false;
 
-        // 左右の画面端を超えると反対側へ
         if (viewPos.x < 0f)
         {
             viewPos.x = 1f;
+            needsCorrection = true;
         }
         else if (viewPos.x > 1f)
         {
             viewPos.x = 0f;
+            needsCorrection = true;
         }
 
-        // 画面上端より上へ出られないようにする
         if (viewPos.y > 1f)
         {
             viewPos.y = 1f;
-
+            needsCorrection = true;
             if (rb.velocity.y > 0f)
-            {
-                rb.velocity = new Vector2(
-                    rb.velocity.x,
-                    0f
-                );
-            }
+                rb.velocity = new Vector2(rb.velocity.x, 0f);
         }
 
-        transform.position =
-            Camera.main.ViewportToWorldPoint(
-                viewPos
-            );
+        // 画面内では位置を書き換えない（Rigidbody2D の上昇を妨げない）
+        if (needsCorrection)
+        {
+            Vector3 worldPos = cam.ViewportToWorldPoint(viewPos);
+            rb.position = new Vector2(worldPos.x, worldPos.y);
+        }
     }
 
     private void UpdateDashUI()
