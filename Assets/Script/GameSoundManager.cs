@@ -39,7 +39,44 @@ public class GameSoundManager : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float sfxVolume = 0.8f;
 
+    private const string BgmVolumeKey = "Bubble_BGMVolume";
+    private const string SeVolumeKey = "Bubble_SEVolume";
+
+    private float bgmSetting = 1f;
+    private float seSetting = 1f;
     private bool warningActive;
+
+    public float BGMSetting => bgmSetting;
+    public float SESetting => seSetting;
+
+    public void SetBGMVolume(float value)
+    {
+        bgmSetting = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat(BgmVolumeKey, bgmSetting);
+        PlayerPrefs.Save();
+        ApplyBGMVolume();
+    }
+
+    public void SetSEVolume(float value)
+    {
+        seSetting = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat(SeVolumeKey, seSetting);
+        PlayerPrefs.Save();
+        ApplyWarningVolume();
+    }
+
+    private void ApplyBGMVolume()
+    {
+        if (bgmSource != null)
+            bgmSource.volume = bgmVolume * bgmSetting *
+                (warningActive ? warningBgmVolumeMultiplier : 1f);
+    }
+
+    private void ApplyWarningVolume()
+    {
+        if (warningSource != null)
+            warningSource.volume = sfxVolume * seSetting;
+    }
 
     private void Awake()
     {
@@ -50,6 +87,8 @@ public class GameSoundManager : MonoBehaviour
         }
 
         Instance = this;
+        bgmSetting = Mathf.Clamp01(PlayerPrefs.GetFloat(BgmVolumeKey, 1f));
+        seSetting = Mathf.Clamp01(PlayerPrefs.GetFloat(SeVolumeKey, 1f));
         if (sfxSource == null) sfxSource = GetComponent<AudioSource>();
         if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
         if (warningSource == null || warningSource == sfxSource)
@@ -60,7 +99,8 @@ public class GameSoundManager : MonoBehaviour
         ConfigureSource(sfxSource, false);
         ConfigureSource(warningSource, loopWarning);
         ConfigureSource(bgmSource, true);
-        bgmSource.volume = bgmVolume;
+        ApplyBGMVolume();
+        ApplyWarningVolume();
     }
 
     private void Start()
@@ -83,7 +123,7 @@ public class GameSoundManager : MonoBehaviour
     private void PlaySound(AudioClip clip)
     {
         if (clip != null && sfxSource != null)
-            sfxSource.PlayOneShot(clip, sfxVolume);
+            sfxSource.PlayOneShot(clip, sfxVolume * seSetting);
     }
 
     public void PlayMainBGM()
@@ -91,7 +131,7 @@ public class GameSoundManager : MonoBehaviour
         if (mainBGM == null || bgmSource == null) return;
         bgmSource.clip = mainBGM;
         bgmSource.loop = true;
-        bgmSource.volume = warningActive ? bgmVolume * warningBgmVolumeMultiplier : bgmVolume;
+        ApplyBGMVolume();
         if (!bgmSource.isPlaying) bgmSource.Play();
     }
 
@@ -104,13 +144,12 @@ public class GameSoundManager : MonoBehaviour
     {
         if (warningActive) return;
         warningActive = true;
-        if (bgmSource != null)
-            bgmSource.volume = bgmVolume * warningBgmVolumeMultiplier;
+        ApplyBGMVolume();
         if (warningSound == null || warningSource == null) return;
         warningSource.Stop();
         warningSource.clip = warningSound;
         warningSource.loop = loopWarning;
-        warningSource.volume = sfxVolume;
+        ApplyWarningVolume();
         warningSource.Play();
     }
 
@@ -118,7 +157,7 @@ public class GameSoundManager : MonoBehaviour
     {
         warningActive = false;
         if (warningSource != null) warningSource.Stop();
-        if (bgmSource != null) bgmSource.volume = bgmVolume;
+        ApplyBGMVolume();
     }
 
     public void PlayEnemyTrap() { PlaySound(enemyTrap); }
